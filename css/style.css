@@ -36,10 +36,15 @@ body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;bac
 .phone-header .status{font-size:12px;opacity:.85} .phone-header button{background:#2a2a31;color:#eee;border:1px solid #3a3a45;border-radius:8px;padding:4px 8px;cursor:pointer}
 .phone-crack{position:absolute;inset:0;background-image:radial-gradient(transparent,transparent 60%,rgba(255,255,255,.06) 61%);pointer-events:none}
 .app-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px} .app{height:70px;border-radius:16px;border:1px solid #2a2a35;background:#15151b;color:#fff;cursor:pointer;font-size:18px}
-.app-view{padding:12px;height:calc(580px - 70px - 40px);overflow:auto} .scrollable{overflow:auto}
+
+/* Make the phone content scroll reliably */
+.app-view{padding:12px;height:calc(580px - 70px - 40px);overflow:auto;-webkit-overflow-scrolling:touch}
+.scrollable{overflow:auto;-webkit-overflow-scrolling:touch}
+.app-pane{min-height:100%}
 .app-pane h3{margin:6px 0 12px}
+
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;background:#121219;border:1px solid #272736;padding:10px;border-radius:10px}
-#buff-list{padding-left:16px;max-height:160px;overflow:auto}
+#buff-list{padding-left:16px;max-height:160px;overflow:auto;-webkit-overflow-scrolling:touch}
 
 /* Inventory */
 .inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px;background:#121219;border:1px solid #272736;border-radius:10px;min-height:120px}
@@ -65,10 +70,10 @@ body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;bac
 
 /* Modal */
 #modal{position:absolute;inset:0;background:rgba(0,0,0,.65);display:grid;place-items:center;z-index:70}
-#modal-content{width:560px;max-width:90vw;background:#16161d;border:1px solid #2a2a35;border-radius:12px;padding:16px}
+#modal-content{width:560px;max-width:90vw;background:#16161d;border:1px solid #2a2a35;border-radius:12px;padding:16px;max-height:85vh;overflow:hidden}
 #modal-close{float:right;background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-#modal-body{clear:both;padding-top:10px}
-.modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+#modal-body{clear:both;padding-top:10px;max-height:70vh;overflow:auto;-webkit-overflow-scrolling:touch}
+.modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;position:sticky;bottom:0;background:rgba(22,22,29,.95);padding-top:10px}
 .modal-actions button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:8px 10px;cursor:pointer}
 
 /* Piano roll & patterns */
@@ -87,7 +92,7 @@ body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;bac
 .daw-head button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
 .daw-controls{display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid #2a2a35}
 .daw-controls button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-#daw-timeline-wrap{flex:1;overflow:auto;background:#0d0d14}
+#daw-timeline-wrap{flex:1;overflow:auto;background:#0d0d14;-webkit-overflow-scrolling:touch}
 #daw-timeline{position:relative;height:260px;min-width:1200px;margin:16px;border:1px solid #24243a;border-radius:10px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0,rgba(255,255,255,.04) 1px,transparent 1px,transparent 16px)}
 #playhead{position:absolute;top:0;bottom:0;width:2px;background:#ffd400;left:0;pointer-events:none}
 .block{position:absolute;width:128px;height:36px;background:#1d1d26;border:1px solid #3a3a45;border-radius:10px;padding:8px 10px;cursor:grab;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -112,11 +117,12 @@ body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;bac
 .bm-head button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
 .bm-controls{display:flex;gap:8px;padding:10px 12px;border-bottom:1px solid #2a2a35}
 .bm-controls button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-#bm-bands{list-style:none;margin:0;padding:0;overflow:auto}
+#bm-bands{list-style:none;margin:0;padding:0;overflow:auto;-webkit-overflow-scrolling:touch}
 #bm-bands li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+#bm-bands li.selected{outline:2px solid rgba(255,212,0,.35)}
 #bm-bands .meta{font-size:12px;opacity:.8}
 #bm-bands button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-#bm-detail{padding:12px;overflow:auto}
+#bm-detail{padding:12px;overflow:auto;-webkit-overflow-scrolling:touch}
 #bm-avatars{display:flex;gap:8px;margin:10px 0}
 .avatar{width:42px;height:42px;border-radius:14px;background:#1d1d26;border:1px solid #2a2a35;display:grid;place-items:center;font-weight:800}
 .bm-tabs{display:flex;gap:8px;margin:10px 0}
