@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bandscape v2 — Data-Driven Rebuild</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+  <div id="game">
+    <!-- Background image (optional); falls back to CSS if missing -->
+    <img id="room-bg" src="images/ui/room_bg.png" alt="apartment" onerror="this.style.display='none'"/>
+
+    <!-- Hotspots (positions stay here for now; later these will be generated from /data/locations/*.json) -->
+    <div class="hotspot pulse" id="hs-guitar" style="left:140px; top:460px; width:70px; height:90px;" data-label="Guitar"></div>
+    <div class="hotspot pulse" id="hs-bookshelf" style="left:90px; top:350px; width:110px; height:150px;" data-label="Bookshelf"></div>
+    <div class="hotspot pulse" id="hs-laptop" style="left:450px; top:380px; width:120px; height:70px;" data-label="Laptop"></div>
+    <div class="hotspot pulse" id="hs-fridge" style="left:520px; top:360px; width:120px; height:200px;" data-label="Fridge"></div>
+    <div class="hotspot pulse" id="hs-bed" style="left:760px; top:420px; width:210px; height:120px;" data-label="Bed"></div>
+    <div class="hotspot pulse" id="hs-door" style="left:880px; top:300px; width:90px; height:170px;" data-label="Door"></div>
+    <div class="hotspot pulse" id="hs-trash" style="left:900px; top:520px; width:64px; height:64px;" data-label="Trash"></div>
+
+    <div id="hover-label">Interact</div>
+
+    <button id="phone-btn" aria-label="Open phone">📱</button>
+    <button id="use-btn" class="hidden">Use</button>
+
+    <!-- Visual key map shaped like a keyboard -->
+    <div id="keymap" class="hidden">
+      <div class="keymap-header">
+        <h4>Guitar Controls</h4>
+        <label class="select-key">Key:
+          <select id="key-select">
+            <option>C</option><option>C#</option><option>D</option><option>D#</option>
+            <option>E</option><option>F</option><option>F#</option><option>G</option>
+            <option>G#</option><option>A</option><option>A#</option><option>B</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="kb">
+        <div class="row row1">
+          <div data-key="q"><span class="k">q</span><span class="lbl"></span></div>
+          <div data-key="w"><span class="k">w</span><span class="lbl"></span></div>
+          <div data-key="e"><span class="k">e</span><span class="lbl"></span></div>
+          <div data-key="r"><span class="k">r</span><span class="lbl"></span></div>
+          <div data-key="t"><span class="k">t</span><span class="lbl"></span></div>
+          <div data-key="y"><span class="k">y</span><span class="lbl"></span></div>
+          <div data-key="u"><span class="k">u</span><span class="lbl"></span></div>
+          <div data-key="i"><span class="k">i</span><span class="lbl"></span></div>
+          <div data-key="o"><span class="k">o</span><span class="lbl"></span></div>
+          <div data-key="p"><span class="k">p</span><span class="lbl"></span></div>
+        </div>
+
+        <div class="row row2">
+          <div data-key="a"><span class="k">a</span><span class="lbl"></span></div>
+          <div data-key="s"><span class="k">s</span><span class="lbl"></span></div>
+          <div data-key="d"><span class="k">d</span><span class="lbl"></span></div>
+          <div data-key="f"><span class="k">f</span><span class="lbl"></span></div>
+          <div data-key="g"><span class="k">g</span><span class="lbl"></span></div>
+          <div data-key="h"><span class="k">h</span><span class="lbl"></span></div>
+          <div data-key="j"><span class="k">j</span><span class="lbl"></span></div>
+          <div data-key="k"><span class="k">k</span><span class="lbl"></span></div>
+          <div data-key="l"><span class="k">l</span><span class="lbl"></span></div>
+          <div data-key=";"><span class="k">;</span><span class="lbl"></span></div>
+        </div>
+
+        <div class="row row3">
+          <div data-key="z"><span class="k">z</span><span class="lbl"></span></div>
+          <div data-key="x"><span class="k">x</span><span class="lbl"></span></div>
+          <div data-key="c"><span class="k">c</span><span class="lbl"></span></div>
+          <div data-key="v"><span class="k">v</span><span class="lbl"></span></div>
+          <div data-key="b"><span class="k">b</span><span class="lbl"></span></div>
+          <div data-key="n"><span class="k">n</span><span class="lbl"></span></div>
+          <div data-key="m"><span class="k">m</span><span class="lbl"></span></div>
+          <div data-key=","><span class="k">,</span><span class="lbl"></span></div>
+          <div data-key="."><span class="k">.</span><span class="lbl"></span></div>
+          <div data-key="/"><span class="k">/</span><span class="lbl"></span></div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span><span class="dot chord"></span>Left side = Chords</span>
+        <span><span class="dot note"></span>Right side = Notes</span>
+        <span style="margin-left:auto;opacity:.7">Space: Practice/Record</span>
+      </div>
+    </div>
+
+    <!-- Phone UI -->
+    <div id="phone" class="hidden" role="dialog" aria-label="Phone">
+      <div class="phone-header">
+        <div class="status">BANDSCAPE OS</div>
+        <button id="phone-close" aria-label="Close phone">✕</button>
+      </div>
+
+      <div class="app-grid">
+        <button class="app" data-app="stats">📈</button>
+        <button class="app" data-app="inventory">🎒</button>
+        <button class="app" data-app="music">🎸</button>
+        <button class="app" data-app="calendar">🗓</button>
+        <button class="app" data-app="fileshare">🌐</button>
+        <button class="app" data-app="bands">👥</button>
+        <button class="app" data-app="contacts">📇</button>
+      </div>
+
+      <div class="app-view scrollable">
+        <div id="app-stats" class="app-pane">
+          <h3>Stats</h3>
+          <div class="stats-grid">
+            <div><strong>Time</strong><div id="stat-time">—</div></div>
+            <div><strong>Health</strong><div id="stat-health">—</div></div>
+            <div><strong>Money</strong><div id="stat-money">—</div></div>
+            <div><strong>Hunger</strong><div id="stat-hunger">—</div></div>
+            <div><strong>Thirst</strong><div id="stat-thirst">—</div></div>
+            <div><strong>Fame</strong><div id="stat-fame">—</div></div>
+            <div><strong>Fans</strong><div id="stat-fans">—</div></div>
+            <div><strong>Ineb.</strong><div id="stat-ineb">—</div></div>
+          </div>
+          <h4>Buffs</h4>
+          <ul id="buff-list"></ul>
+
+          <h4>Equipped</h4>
+          <div class="stats-grid">
+            <div><strong>Instrument</strong><div id="equipped-slot">None</div></div>
+          </div>
+        </div>
+
+        <div id="app-inventory" class="app-pane hidden">
+          <h3>Inventory</h3>
+          <div class="inv-grid" id="player-inv"></div>
+          <p class="hint">Tip: double-click consumables to use them.</p>
+          <button id="open-bandmgr">Open Band Manager</button>
+        </div>
+
+        <div id="app-music" class="app-pane hidden">
+          <h3>TrackLab</h3>
+
+          <div class="tabs">
+            <button class="tab active" data-tab="practice">Practice</button>
+            <button class="tab" data-tab="record">Record</button>
+            <button class="tab" data-tab="library">Library</button>
+          </div>
+
+          <div id="tab-practice">
+            <p>Press keys to play. Space toggles practice mode.</p>
+            <div class="row-btns">
+              <button id="practice-play">Start Practice</button>
+              <button id="practice-stop">Stop</button>
+            </div>
+          </div>
+
+          <div id="tab-record" class="hidden">
+            <p>Space starts/stops recording. Notes recorded to a 32-step grid.</p>
+            <label>BPM:
+              <input id="rec-bpm" type="number" value="120" min="40" max="240"/>
+            </label>
+            <div class="row-btns">
+              <button id="rec-start">Start</button>
+              <button id="rec-stop">Stop</button>
+              <button id="rec-clear">Clear</button>
+            </div>
+            <div id="piano-roll"></div>
+          </div>
+
+          <div id="tab-library" class="hidden">
+            <p>Saved patterns:</p>
+            <div id="pattern-list"></div>
+          </div>
+        </div>
+
+        <div id="app-calendar" class="app-pane hidden">
+          <h3>Calendar</h3>
+          <p>(Coming soon)</p>
+        </div>
+
+        <div id="app-fileshare" class="app-pane hidden">
+          <h3>Fileshare</h3>
+          <p>(Coming later — online)</p>
+        </div>
+
+        <div id="app-bands" class="app-pane hidden">
+          <h3>Bands</h3>
+          <p>Use “Open Band Manager” from Inventory.</p>
+        </div>
+
+        <div id="app-contacts" class="app-pane hidden">
+          <h3>Contacts</h3>
+          <p>(Coming soon)</p>
+        </div>
+      </div>
+
+      <div class="phone-crack"></div>
+    </div>
+
+    <!-- Context menu -->
+    <div id="context-menu" class="hidden" role="menu"></div>
+
+    <!-- Modal -->
+    <div id="modal" class="hidden" role="dialog" aria-label="Modal">
+      <div id="modal-content">
+        <button id="modal-close" aria-label="Close">✕</button>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- Death -->
+    <div id="death" class="hidden" role="dialog" aria-label="Death screen">
+      <div id="death-card">
+        <h2>You died</h2>
+        <p id="death-msg">—</p>
+        <button id="respawn">Respawn at bed</button>
+      </div>
+    </div>
+
+    <!-- Cheat console -->
+    <div id="cheat" class="hidden" role="dialog" aria-label="Cheat console">
+      <div id="cheat-card">
+        <div class="cheat-head">
+          <strong>Cheat Console</strong>
+          <button id="cheat-close">✕</button>
+        </div>
+        <input id="cheat-input" placeholder="type a command…"/>
+        <div id="cheat-log"></div>
+      </div>
+    </div>
+
+    <!-- DAW Overlay -->
+    <div id="daw" class="hidden" role="dialog" aria-label="DAW">
+      <div id="daw-card">
+        <div class="daw-head">
+          <strong>DAW</strong>
+          <button id="daw-close">✕</button>
+        </div>
+        <div class="daw-controls">
+          <button id="daw-import">Import Pattern</button>
+          <button id="daw-dup">Duplicate</button>
+          <button id="daw-del">Delete</button>
+          <button id="daw-play">Play</button>
+          <button id="daw-stop">Stop</button>
+          <button id="daw-save">Save</button>
+          <button id="daw-load">Load</button>
+        </div>
+        <div id="daw-timeline-wrap">
+          <div id="daw-timeline">
+            <div id="playhead"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Band Manager Overlay -->
+    <div id="bandmgr" class="hidden" role="dialog" aria-label="Band Manager">
+      <div id="bm-card">
+        <div class="bm-head">
+          <strong>Band Manager</strong>
+          <button id="bm-close">✕</button>
+        </div>
+
+        <div id="bm-list">
+          <div class="bm-controls">
+            <button id="bm-add">+ Band</button>
+            <button id="bm-del">Delete</button>
+            <button id="bm-sort">Sort: Name</button>
+          </div>
+          <ul id="bm-bands"></ul>
+        </div>
+
+        <div id="bm-detail" class="hidden">
+          <button id="bm-back">← Back</button>
+          <h2 id="bm-name">—</h2>
+          <div id="bm-avatars"></div>
+
+          <div class="bm-tabs">
+            <button class="active" data-tab="members">Members</button>
+            <button data-tab="instruments">Instruments</button>
+            <button data-tab="songs">Songs</button>
+            <button data-tab="bookings">Bookings</button>
+          </div>
+
+          <div id="bm-tab-members"></div>
+          <div id="bm-tab-instruments" class="hidden"></div>
+          <div id="bm-tab-songs" class="hidden"></div>
+          <div id="bm-tab-bookings" class="hidden"></div>
+
+          <div class="bm-footer">
+            <button id="bm-rename">Rename</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Travel Overlay -->
+    <div id="travel" class="hidden" role="dialog" aria-label="Travel">
+      <div id="travel-card">
+        <div class="travel-head">
+          <strong>Travel</strong>
+          <button id="travel-close">✕</button>
+        </div>
+        <p>(Travel screens coming next. This is the placeholder overlay.)</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- IMPORTANT: ES Module entrypoint for the new multi-file JS structure -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

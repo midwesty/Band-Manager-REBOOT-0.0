@@ -1,0 +1,84 @@
+{
+  "id": "apartment",
+  "name": "Apartment",
+  "background": "images/ui/room_bg.png",
+  "hotspots": [
+    {
+      "id": "hs-guitar",
+      "label": "Guitar",
+      "firstUsePulse": true,
+      "rect": { "x": 140, "y": 460, "w": 70, "h": 90 },
+      "actions": [
+        { "type": "guitarContext" }
+      ]
+    },
+    {
+      "id": "hs-bookshelf",
+      "label": "Bookshelf",
+      "firstUsePulse": true,
+      "rect": { "x": 90, "y": 350, "w": 110, "h": 150 },
+      "actions": [
+        {
+          "type": "openStorage",
+          "inventoryId": "storage",
+          "title": "Bookshelf",
+          "flavor": "Dusty manuals, lost picks, and a notebook full of half-lyrics."
+        }
+      ]
+    },
+    {
+      "id": "hs-laptop",
+      "label": "Laptop",
+      "firstUsePulse": true,
+      "rect": { "x": 450, "y": 380, "w": 120, "h": 70 },
+      "actions": [
+        { "type": "openOverlay", "overlay": "daw" }
+      ]
+    },
+    {
+      "id": "hs-fridge",
+      "label": "Fridge",
+      "firstUsePulse": true,
+      "rect": { "x": 520, "y": 360, "w": 120, "h": 200 },
+      "actions": [
+        {
+          "type": "openStorage",
+          "inventoryId": "fridge",
+          "title": "Fridge",
+          "flavor": "It rattles like it’s haunted. Inside: hopes, dreams, and cold carbs."
+        }
+      ]
+    },
+    {
+      "id": "hs-bed",
+      "label": "Bed",
+      "firstUsePulse": true,
+      "rect": { "x": 760, "y": 420, "w": 210, "h": 120 },
+      "actions": [
+        { "type": "bedContext" }
+      ]
+    },
+    {
+      "id": "hs-door",
+      "label": "Door",
+      "firstUsePulse": true,
+      "rect": { "x": 880, "y": 300, "w": 90, "h": 170 },
+      "actions": [
+        { "type": "openOverlay", "overlay": "travel" }
+      ]
+    },
+    {
+      "id": "hs-trash",
+      "label": "Trash",
+      "firstUsePulse": true,
+      "rect": { "x": 900, "y": 520, "w": 64, "h": 64 },
+      "actions": [
+        {
+          "type": "modal",
+          "title": "Trash Pile",
+          "html": "<p>Bottles. Wrappers. Regret. Aesthetic… or a cry for help?</p>"
+        }
+      ]
+    }
+  ]
+}

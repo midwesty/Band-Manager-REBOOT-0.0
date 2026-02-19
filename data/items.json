@@ -1,0 +1,82 @@
+{
+  "pizza_slice": {
+    "name": "Pizza Slice",
+    "icon": "images/items/pizza.png",
+    "type": "consumable",
+    "stackMax": 10,
+    "onUse": [
+      { "type": "statAdd", "stat": "hunger", "value": 40 },
+      { "type": "statAdd", "stat": "thirst", "value": 10 },
+      { "type": "buffAdd", "buffId": "carb_load", "hours": 2, "toast": "Cold pizza: the breakfast of degenerates." }
+    ]
+  },
+
+  "beer": {
+    "name": "Beer",
+    "icon": "images/items/beer.png",
+    "type": "consumable",
+    "stackMax": 10,
+    "onUse": [
+      { "type": "statAdd", "stat": "thirst", "value": 30 },
+      { "type": "statAdd", "stat": "inebriation", "value": 25 },
+      { "type": "statAdd", "stat": "hunger", "value": 10 },
+      { "type": "buffAdd", "buffId": "liquid_confidence", "hours": 2, "toast": "Warm, flat, and somehow perfect." }
+    ]
+  },
+
+  "water": {
+    "name": "Water",
+    "icon": "images/items/water.png",
+    "type": "consumable",
+    "stackMax": 10,
+    "onUse": [
+      { "type": "statAdd", "stat": "thirst", "value": 50, "toast": "Hydration is kinda metal." }
+    ]
+  },
+
+  "juice": {
+    "name": "Juice",
+    "icon": "images/items/juice.png",
+    "type": "consumable",
+    "stackMax": 10,
+    "onUse": [
+      { "type": "statAdd", "stat": "thirst", "value": 35 },
+      { "type": "statAdd", "stat": "hunger", "value": 5, "toast": "Sweet and sticky, like last night’s set." }
+    ]
+  },
+
+  "smokes": {
+    "name": "Cigarettes",
+    "icon": "images/items/smokes.png",
+    "type": "consumable",
+    "stackMax": 10,
+    "onUse": [
+      { "type": "statAdd", "stat": "health", "value": -2 },
+      { "type": "buffAdd", "buffId": "chill", "hours": 3, "toast": "You light up. The cough adds authenticity." }
+    ]
+  },
+
+  "music_book": {
+    "name": "Music Theory Book",
+    "icon": "images/items/book.png",
+    "type": "misc",
+    "stackMax": 1
+  },
+
+  "lyrics_notebook": {
+    "name": "Lyrics Notebook",
+    "icon": "images/items/notebook.png",
+    "type": "tool",
+    "stackMax": 1
+  },
+
+  "guitar_basic": {
+    "name": "Guitar",
+    "icon": "images/items/guitar.png",
+    "type": "instrument",
+    "stackMax": 1,
+    "equipSlot": "instrument",
+    "instrumentId": "guitar",
+    "placeable": true
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "carb_load": {
+    "name": "Carb Load",
+    "desc": "You feel… fueled."
+  },
+  "liquid_confidence": {
+    "name": "Liquid Confidence",
+    "desc": "Confidence: up. Accuracy: unknown."
+  },
+  "chill": {
+    "name": "Chill",
+    "desc": "Relaxed. Slightly worse for lungs."
+  }
+}
