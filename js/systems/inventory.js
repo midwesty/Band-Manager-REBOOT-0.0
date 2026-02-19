@@ -1,6 +1,7 @@
-import { $, $$, on } from "../engine/dom.js";
+import { $, on } from "../engine/dom.js";
 import { getRegistry, getState } from "../engine/state.js";
 import { openModal } from "./modal.js";
+import { saveGame } from "./save.js";
 
 export function initInventorySystem() {
   // render events
@@ -27,7 +28,7 @@ export function initInventorySystem() {
     useFromInventory("player", idx);
   });
 
-  // Basic click context menu via modal (simple + safe)
+  // Click actions (modal)
   invRoot?.addEventListener("click", (e) => {
     const slotEl = e.target.closest(".slot[data-slot]");
     if (!slotEl) return;
@@ -48,7 +49,8 @@ export function renderPlayerInventory() {
     if (!slot) {
       return `<div class="slot" data-slot="${i}" aria-label="Empty slot"></div>`;
     }
-    const def = reg.items[slot.itemId];
+
+    const def = reg.items?.[slot.itemId];
     const icon = def?.icon || "";
     const name = def?.name || slot.itemId;
     const qty = slot.qty ?? 1;
@@ -69,7 +71,7 @@ function openSlotActions(invId, idx) {
   const slot = inv[idx];
   if (!slot) return;
 
-  const def = reg.items[slot.itemId];
+  const def = reg.items?.[slot.itemId];
   const name = def?.name || slot.itemId;
 
   const actions = [];
@@ -81,12 +83,25 @@ function openSlotActions(invId, idx) {
     });
   }
 
+  // Instrument equip (robust)
   if (def?.type === "instrument" && def?.equipSlot === "instrument") {
     actions.push({
-      label: state.equipped.instrumentId === def.instrumentId ? "Unequip" : `Equip ${name}`,
+      label: (state.equipped.instrumentId === (def.instrumentId || inferInstrumentIdFromItem(slot.itemId)))
+        ? "Unequip"
+        : `Equip ${name}`,
       onClick: () => {
-        state.equipped.instrumentId = (state.equipped.instrumentId === def.instrumentId) ? null : def.instrumentId;
+        const inst = def.instrumentId || inferInstrumentIdFromItem(slot.itemId);
+
+        // If we can’t infer, do nothing loud (helps debugging)
+        if (!inst) {
+          alert(`Can't equip "${name}" — missing instrumentId in items.json for itemId "${slot.itemId}".`);
+          return;
+        }
+
+        state.equipped.instrumentId = (state.equipped.instrumentId === inst) ? null : inst;
+
         document.dispatchEvent(new CustomEvent("bandscape:renderAll"));
+        saveGame();
       }
     });
   }
@@ -96,6 +111,7 @@ function openSlotActions(invId, idx) {
     onClick: () => {
       inv[idx] = null;
       document.dispatchEvent(new CustomEvent("bandscape:renderAll"));
+      saveGame();
     }
   });
 
@@ -113,23 +129,21 @@ function useFromInventory(invId, idx) {
   const slot = inv[idx];
   if (!slot) return;
 
-  const def = reg.items[slot.itemId];
+  const def = reg.items?.[slot.itemId];
   if (!def?.onUse) return;
 
-  // Apply effects
   applyItemEffects(def.onUse);
 
-  // Decrement qty
   const qty = slot.qty ?? 1;
   if (qty <= 1) inv[idx] = null;
   else slot.qty = qty - 1;
 
   document.dispatchEvent(new CustomEvent("bandscape:renderAll"));
+  saveGame();
 }
 
 function applyItemEffects(effects) {
   const state = getState();
-  const reg = getRegistry();
 
   for (const fx of effects) {
     if (fx.type === "statAdd") {
@@ -151,15 +165,21 @@ function applyItemEffects(effects) {
     const nowAbs = (state.time.day - 1) * 24 + state.time.hour;
     const untilAbs = nowAbs + Math.max(1, hours);
 
-    const idx = state.buffs.findIndex(b => b.id === buffId);
-    if (idx >= 0) state.buffs[idx].untilHourAbs = untilAbs;
+    const i = state.buffs.findIndex(b => b.id === buffId);
+    if (i >= 0) state.buffs[i].untilHourAbs = untilAbs;
     else state.buffs.push({ id: buffId, untilHourAbs: untilAbs });
   }
 
   function toast(msg) {
-    // Minimal toast (no extra UI needed yet)
     console.log("[Toast]", msg);
   }
+}
+
+// Helps if your items.json is missing instrumentId
+function inferInstrumentIdFromItem(itemId) {
+  if (!itemId) return null;
+  if (itemId === "guitar" || itemId === "guitar_basic" || itemId.includes("guitar")) return "guitar";
+  return null;
 }
 
 function renderStats() {
@@ -183,25 +203,26 @@ function renderBuffs() {
   const reg = getRegistry();
   const nowAbs = (state.time.day - 1) * 24 + state.time.hour;
 
-  ul.innerHTML = state.buffs.map(b => {
-    const meta = reg.buffs[b.id];
-    const name = meta?.name || b.id;
-    const rem = Math.max(0, b.untilHourAbs - nowAbs);
-    return `<li><strong>${escapeHTML(name)}</strong> <span style="opacity:.75">(${rem}h)</span></li>`;
-  }).join("") || `<li style="opacity:.7">None</li>`;
+  const rows = (state.buffs || []).map(b => {
+    const def = reg.buffs?.[b.id];
+    const nm = def?.name || b.id;
+    const left = Math.max(0, (b.untilHourAbs ?? nowAbs) - nowAbs);
+    return `<li>${escapeHTML(nm)} <span style="opacity:.7">(${left}h)</span></li>`;
+  });
+
+  ul.innerHTML = rows.join("") || `<li style="opacity:.6">No active buffs</li>`;
 }
 
 function renderEquipped() {
-  const state = getState();
   const el = $("#equipped-slot");
   if (!el) return;
-  el.textContent = state.equipped.instrumentId ? state.equipped.instrumentId : "None";
+  const state = getState();
+  el.textContent = state.equipped.instrumentId ? `Instrument: ${state.equipped.instrumentId}` : "Instrument: (none)";
 }
 
-function setText(id, val) {
+function setText(id, txt) {
   const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = String(val);
+  if (el) el.textContent = String(txt);
 }
 
 function pad2(n) {

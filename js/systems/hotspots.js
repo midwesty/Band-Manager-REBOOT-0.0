@@ -1,11 +1,18 @@
-import { $, $$, on } from "../engine/dom.js";
+import { $, $$ } from "../engine/dom.js";
 import { getRegistry, getState, isHotspotUsed, markHotspotUsed } from "../engine/state.js";
 import { openModal } from "./modal.js";
 import { openOverlay } from "./overlays.js";
 import { saveGame, loadGame } from "./save.js";
 
+/**
+ * Hotspots are generated from data/locations/*.json (location.hotspots[]).
+ * This file is responsible for:
+ * - hover label
+ * - creating hotspot divs
+ * - running hotspot actions (openStorage, openOverlay, guitarContext, bedContext, modal)
+ */
+
 export function initHotspotSystem() {
-  // Hover label
   const hover = $("#hover-label");
   const game = $("#game");
   if (!hover || !game) return;
@@ -30,7 +37,7 @@ export function initHotspotSystem() {
 export function buildHotspotsFromLocation(location) {
   if (!location?.hotspots) return;
 
-  // Remove existing hotspots (lets you keep HTML clean)
+  // Remove existing hotspots (keeps HTML clean)
   $$(".hotspot").forEach(h => h.remove());
 
   const game = $("#game");
@@ -43,11 +50,8 @@ export function buildHotspotsFromLocation(location) {
     div.dataset.label = hs.label || hs.id;
 
     // First-use pulse
-    if (hs.firstUsePulse && !isHotspotUsed(hs.id)) {
-      div.classList.add("pulse");
-    } else {
-      div.classList.add("used");
-    }
+    if (hs.firstUsePulse && !isHotspotUsed(hs.id)) div.classList.add("pulse");
+    else div.classList.add("used");
 
     // Position from rect
     const r = hs.rect || { x: 0, y: 0, w: 60, h: 60 };
@@ -56,7 +60,6 @@ export function buildHotspotsFromLocation(location) {
     div.style.width = `${r.w}px`;
     div.style.height = `${r.h}px`;
 
-    // Click
     div.addEventListener("click", () => {
       handleHotspot(hs);
       markHotspotUsed(hs.id);
@@ -69,10 +72,7 @@ export function buildHotspotsFromLocation(location) {
 }
 
 function handleHotspot(hs) {
-  const actions = hs.actions || [];
-  for (const a of actions) {
-    runAction(a);
-  }
+  for (const action of (hs.actions || [])) runAction(action);
 }
 
 function runAction(action) {
@@ -88,14 +88,11 @@ function runAction(action) {
       break;
 
     case "modal":
-      openModal({
-        title: action.title || "",
-        html: action.html || ""
-      });
+      openModal({ title: action.title || "", html: action.html || "" });
       break;
 
     case "guitarContext":
-      openGuitarContext();
+      openGuitarContext(action);
       break;
 
     case "bedContext":
@@ -110,29 +107,27 @@ function runAction(action) {
 function openStorageModal(action) {
   const state = getState();
   const reg = getRegistry();
+
   const invId = action.inventoryId;
-  const inv = state.inventories[invId];
+  const inv = state.inventories?.[invId];
   if (!inv) return;
 
   openModal({
     title: action.title || "Storage",
     html: `
-      <p style="opacity:.8;margin-top:0">${action.flavor || ""}</p>
+      <p style="opacity:.8;margin-top:0">${escapeHTML(action.flavor || "")}</p>
       <div class="inv-grid" id="modal-inv"></div>
-      <p class="hint">Double-click consumables in your phone inventory to use them.</p>
+      <p class="hint">Tip: open your phone → Inventory. Double-click consumables to use them.</p>
     `,
-    actions: [
-      { label: "Close", onClick: () => {} }
-    ]
+    actions: [{ label: "Close", onClick: () => {} }]
   });
 
-  // render inside modal
   const grid = document.getElementById("modal-inv");
   if (!grid) return;
 
   grid.innerHTML = inv.map((slot, i) => {
     if (!slot) return `<div class="slot" data-slot="${i}"></div>`;
-    const def = reg.items[slot.itemId];
+    const def = reg.items?.[slot.itemId];
     const icon = def?.icon || "";
     const name = def?.name || slot.itemId;
     const qty = slot.qty ?? 1;
@@ -146,35 +141,46 @@ function openStorageModal(action) {
   }).join("");
 }
 
-function openGuitarContext() {
+/**
+ * Fix: normalize guitar behavior across ALL systems.
+ * - Item id can be "guitar" OR "guitar_basic" depending on your items.json
+ * - Instrument id MUST be "guitar" for music.js gating
+ */
+function openGuitarContext(action = {}) {
   const state = getState();
   const reg = getRegistry();
 
-  // If player already has guitar in inventory, offer equip
-  const hasGuitar = state.inventories.player.some(s => s?.itemId === "guitar_basic");
-  const guitarDef = reg.items["guitar_basic"];
+  const guitarItemId =
+    (reg.items && reg.items["guitar"]) ? "guitar" :
+    (reg.items && reg.items["guitar_basic"]) ? "guitar_basic" :
+    "guitar";
+
+  const hasGuitar = state.inventories?.player?.some(s => s?.itemId === guitarItemId);
+  const title = action.title || "Guitar";
+  const flavor = action.flavor || "A scratched-up guitar that still has a few good riffs left.";
 
   openModal({
-    title: "Guitar",
-    html: `<p style="opacity:.85;margin-top:0">A scratched-up guitar that still has a few good riffs left.</p>`,
+    title,
+    html: `<p style="opacity:.85;margin-top:0">${escapeHTML(flavor)}</p>`,
     actions: [
       {
-        label: hasGuitar ? "Equip Guitar" : "Take Guitar",
+        label: hasGuitar ? "Equip Guitar" : "Take + Equip Guitar",
         onClick: () => {
           if (!hasGuitar) {
             const slot = firstEmpty(state.inventories.player);
             if (slot === -1) return alert("Inventory is full.");
-            state.inventories.player[slot] = { itemId: "guitar_basic", qty: 1 };
+            state.inventories.player[slot] = { itemId: guitarItemId, qty: 1 };
           }
-          // Equip
-          state.equipped.instrumentId = guitarDef?.instrumentId || "guitar";
+
+          // System-wide invariant:
+          state.equipped ||= { instrumentId: null };
+          state.equipped.instrumentId = "guitar";
+
           document.dispatchEvent(new CustomEvent("bandscape:renderAll"));
+          saveGame();
         }
       },
-      {
-        label: "Close",
-        onClick: () => {}
-      }
+      { label: "Close", onClick: () => {} }
     ]
   });
 }
@@ -195,6 +201,7 @@ function openBedContext() {
           }
           state.stats.health = Math.min(100, state.stats.health + 15);
           document.dispatchEvent(new CustomEvent("bandscape:renderAll"));
+          saveGame();
         }
       },
       { label: "Save Game", onClick: () => saveGame() },
