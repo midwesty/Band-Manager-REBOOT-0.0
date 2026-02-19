@@ -1,0 +1,46 @@
+{
+  "npcs": [
+    {
+      "id": "npc_you",
+      "name": "You",
+      "archetype": "Player",
+      "reliability": 0.9,
+      "skill": 0.4
+    },
+    {
+      "id": "npc_brian",
+      "name": "Brian",
+      "archetype": "Drummer",
+      "reliability": 0.8,
+      "skill": 0.6
+    },
+    {
+      "id": "npc_lex",
+      "name": "Lex",
+      "archetype": "Bassist",
+      "reliability": 0.7,
+      "skill": 0.55
+    },
+    {
+      "id": "npc_ruby",
+      "name": "Ruby",
+      "archetype": "Singer",
+      "reliability": 0.65,
+      "skill": 0.5
+    },
+    {
+      "id": "npc_jo",
+      "name": "Jo",
+      "archetype": "Keys",
+      "reliability": 0.6,
+      "skill": 0.5
+    },
+    {
+      "id": "npc_mack",
+      "name": "Mack",
+      "archetype": "Guitarist",
+      "reliability": 0.6,
+      "skill": 0.5
+    }
+  ]
+}

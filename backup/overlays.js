@@ -53,29 +53,18 @@ export function openOverlay(id) {
   const el = $(`#${id}`);
   if (!el) return;
   show(el);
-
-  // Overlay lifecycle event (systems can hook into this)
-  window.dispatchEvent(new CustomEvent("bandscape:overlayOpened", { detail: { id } }));
 }
 
 export function closeOverlay(id) {
   const el = $(`#${id}`);
   if (!el) return;
   hide(el);
-
-  // If the phone closes, always hide the free-floating keymap
-  if (id === "phone") {
-    const km = $("#keymap");
-    km?.classList.add("hidden");
-  }
-
-  window.dispatchEvent(new CustomEvent("bandscape:overlayClosed", { detail: { id } }));
 }
 
 export function toggleOverlay(id) {
   const el = $(`#${id}`);
   if (!el) return;
-  el.classList.contains("hidden") ? openOverlay(id) : closeOverlay(id);
+  el.classList.contains("hidden") ? show(el) : hide(el);
 }
 
 function showPhonePane(appId) {
@@ -84,11 +73,5 @@ function showPhonePane(appId) {
   const target = document.querySelector(`#app-${appId}`);
   target?.classList.remove("hidden");
 
-  // Music keymap lives outside the phone; hide it unless we're on TrackLab.
-  if (appId !== "music") {
-    const km = $("#keymap");
-    km?.classList.add("hidden");
-  }
-
-  window.dispatchEvent(new CustomEvent("bandscape:phoneAppChanged", { detail: { appId } }));
+  // tabs not needed here; phone uses app panes
 }
