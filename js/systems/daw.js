@@ -5,6 +5,28 @@ export class DAW {
     this.state = state;
     this.music = music;
 
+    // Allow DAW to run without the UI helper class (DOM-wired fallback)
+    if (!this.ui || !this.ui.daw) {
+      this.ui = this.ui || {};
+      const byId = (id) => document.getElementById(id);
+      Object.assign(this.ui, {
+        daw: byId("daw"),
+        dawTimeline: byId("daw-timeline"),
+        dawImport: byId("daw-import"),
+        dawDup: byId("daw-dup"),
+        dawDel: byId("daw-del"),
+        dawPlay: byId("daw-play"),
+        dawStop: byId("daw-stop"),
+        dawSave: byId("daw-save"),
+        dawLoad: byId("daw-load"),
+        dawClose: byId("daw-close"),
+        playhead: byId("playhead"),
+      });
+    }
+
+    // Support passing the state wrapper { get state(){...}, save(){} }
+    this._getState = () => (this.state?.state || this.state);
+
     this.DAW_LANES = 5;
     this.pxPerStep = 4;
     this.blockWidth = 128;
@@ -55,7 +77,8 @@ export class DAW {
   }
 
   promptImport() {
-    const patterns = this.state.state.patterns || [];
+    const state = this._getState();
+    const patterns = state.patterns || [];
     if (patterns.length === 0) { alert("No patterns saved yet. Record one first."); return; }
     const names = patterns.map((p, i) => `${i}: ${p.name}`).join("\n");
     const pick = prompt("Import which pattern?\n" + names, "0");
@@ -64,57 +87,69 @@ export class DAW {
   }
 
   importPattern(idx) {
-    const p = this.state.state.patterns[idx];
+    const state = this._getState();
+    state.daw ||= { bpm: 120, blocks: [], selectedId: null };
+    const p = state.patterns[idx];
     if (!p) return;
     const id = Math.random().toString(36).slice(2);
-    this.state.state.daw.blocks.push({ id, name: p.name, patternIndex: idx, startStep: 0, length: p.length, lane: 0 });
+    state.daw.blocks.push({ id, name: p.name, patternIndex: idx, startStep: 0, length: p.length, lane: 0 });
     this.rebuild();
-    this.state.save();
+    this.state.save?.();
   }
 
   duplicateSelected() {
-    const id = this.state.state.daw.selectedId;
+    const state = this._getState();
+    const id = state.daw?.selectedId;
     if (!id) return;
-    const b = this.state.state.daw.blocks.find(x => x.id === id);
+    const b = state.daw.blocks.find(x => x.id === id);
     if (!b) return;
     const nb = { ...b, id: Math.random().toString(36).slice(2), startStep: b.startStep + 16 };
-    this.state.state.daw.blocks.push(nb);
+    state.daw.blocks.push(nb);
     this.rebuild();
-    this.state.save();
+    this.state.save?.();
   }
 
   deleteSelected() {
-    const id = this.state.state.daw.selectedId;
+    const state = this._getState();
+    const id = state.daw?.selectedId;
     if (!id) return;
-    this.state.state.daw.blocks = this.state.state.daw.blocks.filter(b => b.id !== id);
-    this.state.state.daw.selectedId = null;
+    state.daw.blocks = state.daw.blocks.filter(b => b.id !== id);
+    state.daw.selectedId = null;
     this.rebuild();
-    this.state.save();
+    this.state.save?.();
   }
 
   saveProjectPrompt() {
+    const state = this._getState();
+    state.projects ||= [];
+    state.daw ||= { bpm: 120, blocks: [], selectedId: null };
+
     const name = prompt("Save project as:", "Project_" + Math.floor(Math.random() * 1000));
     if (!name) return;
-    const snapshot = { name, bpm: this.state.state.daw.bpm, blocks: this.state.state.daw.blocks };
-    const projects = this.state.state.projects || (this.state.state.projects = []);
+
+    const snapshot = { name, bpm: state.daw.bpm, blocks: state.daw.blocks };
+    const projects = state.projects;
     const idx = projects.findIndex(p => p.name === name);
     if (idx >= 0) projects[idx] = snapshot; else projects.push(snapshot);
-    this.state.save();
+
+    this.state.save?.();
     alert("Project saved.");
   }
 
   loadProjectPrompt() {
-    const projects = this.state.state.projects || [];
+    const state = this._getState();
+    const projects = state.projects || [];
     if (projects.length === 0) { alert("No projects saved."); return; }
     const names = projects.map((p, i) => `${i}: ${p.name}`).join("\n");
     const pick = prompt("Load which project?\n" + names, "0");
     const idx = parseInt(pick || "0", 10);
     if (!Number.isNaN(idx) && projects[idx]) {
       const proj = projects[idx];
-      this.state.state.daw.blocks = JSON.parse(JSON.stringify(proj.blocks || []));
-      this.state.state.daw.bpm = proj.bpm || 120;
+      state.daw ||= { bpm: 120, blocks: [], selectedId: null };
+      state.daw.blocks = JSON.parse(JSON.stringify(proj.blocks || []));
+      state.daw.bpm = proj.bpm || 120;
       this.rebuild();
-      this.state.save();
+      this.state.save?.();
       alert("Project loaded.");
     }
   }
@@ -122,32 +157,48 @@ export class DAW {
   rebuild() {
     if (!this.ui.dawTimeline) return;
 
+    const state = this._getState();
+    state.daw ||= { bpm: 120, blocks: [], selectedId: null };
+
     this.ui.dawTimeline.querySelectorAll(".block, .lane-guide").forEach(b => b.remove());
 
     for (let i = 0; i < this.DAW_LANES; i++) {
       const g = document.createElement("div");
       g.className = "lane-guide";
-      Object.assign(g.style, {
-        position: "absolute", left: "0", right: "0",
-        top: (10 + i * 44) + "px", height: "44px",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)"
-      });
+      g.style.position = "absolute";
+      g.style.left = "0";
+      g.style.right = "0";
+      g.style.top = (i * 60) + "px";
+      g.style.height = "60px";
+      g.style.borderTop = "1px solid rgba(255,255,255,.06)";
       this.ui.dawTimeline.appendChild(g);
     }
 
-    for (const b of this.state.state.daw.blocks) {
-      if (typeof b.lane !== "number") b.lane = 0;
+    state.daw.blocks.forEach(b => {
       const el = document.createElement("div");
       el.className = "block";
-      el.textContent = b.name;
       el.dataset.id = b.id;
+      el.textContent = b.name || "Pattern";
+      el.style.position = "absolute";
       el.style.left = (b.startStep * this.pxPerStep) + "px";
-      el.style.top = (10 + b.lane * 44 + 4) + "px";
+      el.style.top = (b.lane * 60 + 6) + "px";
+      el.style.width = Math.max(40, (b.length * this.pxPerStep)) + "px";
+      el.style.height = "48px";
+      el.style.borderRadius = "10px";
+      el.style.padding = "8px";
+      el.style.background = "rgba(255,212,0,.15)";
+      el.style.border = "1px solid rgba(255,212,0,.35)";
+      el.style.cursor = "grab";
+      el.style.userSelect = "none";
 
-      el.addEventListener("click", () => {
-        this.state.state.daw.selectedId = b.id;
-        this.refreshSelection();
+      if (state.daw.selectedId === b.id) {
+        el.style.outline = "2px solid rgba(127,209,255,.9)";
+      }
+
+      el.addEventListener("mousedown", (e) => {
+        state.daw.selectedId = b.id;
+        this.rebuild();
+        e.stopPropagation();
       });
 
       el.draggable = true;
@@ -156,68 +207,80 @@ export class DAW {
       });
 
       this.ui.dawTimeline.appendChild(el);
-    }
-
-    this.refreshSelection();
-    if (this.ui.playhead) this.ui.playhead.style.left = "0px";
-  }
-
-  refreshSelection() {
-    this.ui.dawTimeline?.querySelectorAll(".block").forEach(el => {
-      el.classList.toggle("selected", el.dataset.id === this.state.state.daw.selectedId);
     });
+
+    this.ui.dawTimeline.addEventListener("mousedown", () => {
+      state.daw.selectedId = null;
+      this.rebuild();
+    }, { once: true });
   }
 
   #bindTimelineDnD() {
-    this.ui.dawTimeline?.addEventListener("dragover", (e) => e.preventDefault());
-    this.ui.dawTimeline?.addEventListener("drop", (e) => {
+    const tl = this.ui.dawTimeline;
+    if (!tl) return;
+
+    tl.addEventListener("dragover", (e) => e.preventDefault());
+    tl.addEventListener("drop", (e) => {
       e.preventDefault();
       const id = e.dataTransfer.getData("text/plain");
-      const block = this.state.state.daw.blocks.find(x => x.id === id);
-      if (!block) return;
+      if (!id) return;
 
-      const rect = this.ui.dawTimeline.getBoundingClientRect();
+      const state = this._getState();
+      const b = state.daw?.blocks?.find(x => x.id === id);
+      if (!b) return;
+
+      const rect = tl.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      const step = Math.max(
-        0,
-        Math.min(this.state.state.daw.durationSteps - 1, Math.round((x - (this.blockWidth / 2)) / this.pxPerStep))
-      );
-      const lane = Math.max(0, Math.min(this.DAW_LANES - 1, Math.floor((y - 10) / 44)));
-
-      block.startStep = step;
-      block.lane = lane;
+      b.startStep = Math.max(0, Math.round(x / this.pxPerStep));
+      b.lane = Math.max(0, Math.min(this.DAW_LANES - 1, Math.floor(y / 60)));
 
       this.rebuild();
-      this.state.save();
+      this.state.save?.();
     });
   }
 
   play() {
-    if (this.state.state.daw.playing) return;
-    this.state.state.daw.playing = true;
+    const state = this._getState();
+    state.daw ||= { bpm: 120, blocks: [], selectedId: null };
+
+    if (this.timer) return;
+    const bpm = state.daw.bpm || 120;
+    const msPerStep = Math.max(30, Math.floor((60_000 / bpm) / 4));
+
     this.playStep = 0;
-    if (this.ui.playhead) this.ui.playhead.style.left = "0px";
-
-    const bpm = this.state.state.daw.bpm || 120;
-    const msPerStep = (60000 / bpm) / 4;
-
     this.timer = setInterval(() => {
-      for (const b of this.state.state.daw.blocks) {
-        if (b.startStep === this.playStep) {
-          const p = this.state.state.patterns[b.patternIndex];
-          if (p) this.music.playPattern(p);
-        }
-      }
-      this.playStep = (this.playStep + 1) % (this.state.state.daw.durationSteps || 128);
-      if (this.ui.playhead) this.ui.playhead.style.left = (this.playStep * this.pxPerStep) + "px";
+      this.tickPlayhead();
+      this.playStep++;
+      if (this.playStep >= 256) this.playStep = 0;
     }, msPerStep);
   }
 
   stop() {
-    this.state.state.daw.playing = false;
-    if (this.timer) { clearInterval(this.timer); this.timer = null; }
-    if (this.ui.playhead) this.ui.playhead.style.left = "0px";
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+    this.setPlayhead(0);
+  }
+
+  tickPlayhead() {
+    const state = this._getState();
+    const blocks = state.daw?.blocks || [];
+
+    blocks.forEach((b) => {
+      if (b.startStep === this.playStep) {
+        const p = state.patterns?.[b.patternIndex];
+        if (p && this.music?.previewPattern) this.music.previewPattern(p);
+      }
+    });
+
+    this.setPlayhead(this.playStep);
+  }
+
+  setPlayhead(step) {
+    const ph = this.ui.playhead;
+    const tl = this.ui.dawTimeline;
+    if (!ph || !tl) return;
+    ph.style.left = (step * this.pxPerStep) + "px";
   }
 }

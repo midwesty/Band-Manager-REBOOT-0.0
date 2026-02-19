@@ -30,7 +30,13 @@ export function openModal({ title = "", html = "", actions = [] } = {}) {
       ).join("")}</div>`
     : "";
 
-  modalBody.innerHTML = `${safeTitle}${html}${buttons}`;
+  // Scrollable body wrapper (works even if CSS is imperfect)
+  modalBody.innerHTML = `${safeTitle}
+    <div class="modal-scroll" style="max-height:65vh;overflow:auto;-webkit-overflow-scrolling:touch;padding-right:4px">
+      ${html}
+    </div>
+    ${buttons}
+  `;
   show(modal);
 
   if (actions.length) {
@@ -41,6 +47,7 @@ export function openModal({ title = "", html = "", actions = [] } = {}) {
       const idx = Number(btn.dataset.act);
       const act = actions[idx];
       if (act?.onClick) act.onClick();
+      if (!act?.keepOpen) closeModal();
     });
   }
 }
@@ -53,6 +60,6 @@ export function closeModal() {
 
 function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
-  }[c]));
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+  })[c]);
 }

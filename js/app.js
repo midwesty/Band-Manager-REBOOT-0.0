@@ -1,12 +1,16 @@
 import { loadAllData } from "./engine/data.js";
 import { $ } from "./engine/dom.js";
 import { createInitialState, setDataRegistry, getState } from "./engine/state.js";
-import { loadSaveIfAny } from "./systems/save.js";
+import { loadSaveIfAny, saveGame } from "./systems/save.js";
 import { startTimeLoop } from "./systems/time.js";
 import { initModalSystem } from "./systems/modal.js";
 import { initOverlaySystem } from "./systems/overlays.js";
 import { initInventorySystem } from "./systems/inventory.js";
 import { initHotspotSystem, buildHotspotsFromLocation } from "./systems/hotspots.js";
+
+import { Music } from "./systems/music.js";
+import { BandMgr } from "./systems/bandmgr.js";
+import { DAW } from "./systems/daw.js";
 
 export async function boot() {
   // Load JSON registries
@@ -16,11 +20,25 @@ export async function boot() {
   // Base state
   createInitialState();
 
-  // Systems
+  // Core systems
   initModalSystem();
   initOverlaySystem();
   initInventorySystem();
   initHotspotSystem();
+
+  // Feature systems (DOM-wired)
+  // Wrap state so systems can call stateWrap.state + stateWrap.save()
+  const stateWrap = { 
+    get state() { return getState(); }, 
+    save: saveGame 
+  };
+
+  const music = new Music({ state: stateWrap, data });
+  const bandMgr = new BandMgr({ state: stateWrap });
+  const daw = new DAW({ state: stateWrap, data, music });
+
+  // Expose for debugging in console
+  window.BANDSCAPE = { state: stateWrap, music, bandMgr, daw, data };
 
   // Apply location background and generate hotspots from JSON
   const roomBg = $("#room-bg");
@@ -28,7 +46,7 @@ export async function boot() {
     roomBg.src = data.location.background;
   }
 
-  // If you still have old hardcoded hotspots in HTML, this will replace them
+  // Replace any old hardcoded hotspots in HTML
   buildHotspotsFromLocation(data.location);
 
   // Load save (optional)

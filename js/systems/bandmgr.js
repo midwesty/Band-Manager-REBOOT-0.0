@@ -36,7 +36,7 @@ export class BandMgr {
     };
 
     // Ensure state containers exist
-    const s = this.state?.state || (this.state.state = {});
+    const s = (this.state?.state) || this.state || (this.state.state = {});
     s.bands ||= [];
     s.bandMgr ||= { sort: "name" };
 
@@ -202,7 +202,6 @@ export class BandMgr {
       // Clicking the row selects it (helps Delete button)
       li.addEventListener("click", () => {
         this.selectedId = b.id;
-        // Quick highlight by toggling a class (optional)
         this.el.list.querySelectorAll("li").forEach((x) => x.classList.remove("selected"));
         li.classList.add("selected");
       });
@@ -212,143 +211,35 @@ export class BandMgr {
   }
 
   renderDetail(band) {
-    this.selectedId = band.id;
-
     this.el.listPane?.classList.add("hidden");
     this.el.detailPane?.classList.remove("hidden");
 
-    if (this.el.name) this.el.name.textContent = band.name;
-
-    // Avatars placeholder
+    if (this.el.name) this.el.name.textContent = band.name || "Unnamed";
     if (this.el.avatars) {
       this.el.avatars.innerHTML = "";
-      const max = Math.max(3, (band.members || []).length);
-      for (let i = 0; i < max; i++) {
+      const mem = band.members || [];
+      if (mem.length === 0) {
         const av = document.createElement("div");
         av.className = "avatar";
-        const m = band.members?.[i];
-        av.textContent = m ? (m.name?.[0] || "?") : "+";
+        av.textContent = "?";
         this.el.avatars.appendChild(av);
+      } else {
+        mem.slice(0, 6).forEach((m) => {
+          const av = document.createElement("div");
+          av.className = "avatar";
+          av.textContent = (m.name || "?").slice(0, 2).toUpperCase();
+          this.el.avatars.appendChild(av);
+        });
       }
-    }
-
-    this.renderMembersTab(band);
-    this.renderSongsTab(band);
-
-    if (this.el.tabInstruments) {
-      this.el.tabInstruments.innerHTML = `<p>Assign instruments to members (coming soon). For now, edit in Members tab.</p>`;
-    }
-    if (this.el.tabBookings) {
-      this.el.tabBookings.innerHTML = `<p>Venue bookings & calendar integration (coming soon).</p>`;
     }
 
     // Default tab
     this.switchTab("members");
   }
 
-  renderMembersTab(band) {
-    if (!this.el.tabMembers) return;
-
-    this.el.tabMembers.innerHTML = `
-      <div class="bm-toolbar" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-        <button id="bm-add-mem">+ Add Member</button>
-        <span style="opacity:.7;font-size:12px">Tip: click fields and edit</span>
-      </div>
-      <div style="overflow:auto">
-        <table style="width:100%;border-collapse:collapse">
-          <thead>
-            <tr>
-              <th style="text-align:left;padding:6px 0">Name</th>
-              <th style="text-align:left;padding:6px 0">Role</th>
-              <th style="text-align:left;padding:6px 0">Instrument</th>
-              <th style="width:60px"></th>
-            </tr>
-          </thead>
-          <tbody id="bm-mem-body"></tbody>
-        </table>
-      </div>
-    `;
-
-    const body = this.el.tabMembers.querySelector("#bm-mem-body");
-    (band.members || []).forEach((m, idx) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td style="padding:4px 6px 4px 0"><input style="width:100%" data-idx="${idx}" data-k="name" value="${this.escape(m.name || "")}"/></td>
-        <td style="padding:4px 6px"><input style="width:100%" data-idx="${idx}" data-k="role" value="${this.escape(m.role || "")}"/></td>
-        <td style="padding:4px 6px"><input style="width:100%" data-idx="${idx}" data-k="instrument" value="${this.escape(m.instrument || "")}"/></td>
-        <td style="padding:4px 0"><button data-del="${idx}">🗑</button></td>
-      `;
-      body.appendChild(tr);
-    });
-
-    // Save edits
-    this.el.tabMembers.querySelectorAll("input").forEach((inp) => {
-      inp.addEventListener("change", () => {
-        const i = parseInt(inp.dataset.idx, 10);
-        const k = inp.dataset.k;
-        band.members[i][k] = inp.value;
-        this.state.save?.();
-      });
-    });
-
-    // Delete member
-    this.el.tabMembers.querySelectorAll("button[data-del]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const i = parseInt(btn.dataset.del, 10);
-        band.members.splice(i, 1);
-        this.state.save?.();
-        this.renderDetail(band);
-      });
-    });
-
-    // Add member
-    this.el.tabMembers.querySelector("#bm-add-mem")?.addEventListener("click", () => {
-      (band.members ||= []).push({ name: "New Member", role: "", instrument: "" });
-      this.state.save?.();
-      this.renderDetail(band);
-    });
-  }
-
-  renderSongsTab(band) {
-    if (!this.el.tabSongs) return;
-
-    this.el.tabSongs.innerHTML = `
-      <div class="bm-toolbar" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-        <button id="bm-add-song">+ Add Song</button>
-        <span style="opacity:.7;font-size:12px">Later: link songs to TrackLab patterns</span>
-      </div>
-      <ul id="bm-song-list" style="list-style:none;margin:0;padding:0"></ul>
-    `;
-
-    const list = this.el.tabSongs.querySelector("#bm-song-list");
-    (band.songs || []).forEach((s, idx) => {
-      const li = document.createElement("li");
-      li.style.padding = "8px 10px";
-      li.style.borderBottom = "1px solid rgba(255,255,255,.06)";
-      li.textContent = `${s.title || "Untitled"} — ${s.bpm || 120} BPM • ${s.genre || "Unknown"}`;
-      list.appendChild(li);
-    });
-
-    this.el.tabSongs.querySelector("#bm-add-song")?.addEventListener("click", () => {
-      const title = prompt("Song title:", "New Song");
-      if (!title) return;
-
-      const bpm = parseInt(prompt("BPM:", "120") || "120", 10);
-      const genre = prompt("Genre:", "Alt Rock") || "Alt Rock";
-
-      (band.songs ||= []).push({ title, bpm: isFinite(bpm) ? bpm : 120, genre });
-      this.state.save?.();
-      this.renderDetail(band);
-    });
-  }
-
   escape(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    }[c]));
+    return String(s || "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+    })[c]);
   }
 }

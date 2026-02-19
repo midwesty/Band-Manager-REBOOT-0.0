@@ -2,137 +2,115 @@
 *{box-sizing:border-box} html,body{height:100%}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0f0f12;color:#eee;overflow:hidden;display:flex;align-items:center;justify-content:center}
 #game{position:relative;width:1024px;height:640px}
-#room-bg{position:absolute;inset:0;width:1024px;height:640px;object-fit:cover;display:block}
-/* fallback bg if image missing */
-#room-bg[style*="display: none"] ~ #fallback-bg{display:block}
+#room-bg{position:absolute;inset:0;width:1024px;height:640px;object-fit:cover;filter:contrast(1.03) brightness(.95)}
+#hover-label{position:absolute;left:12px;top:12px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);padding:6px 10px;border-radius:10px;font-size:12px;pointer-events:none;z-index:55}
 
-@keyframes pulseBlue{0%{box-shadow:0 0 8px rgba(100,180,255,0)}50%{box-shadow:0 0 15px rgba(100,180,255,.25)}100%{box-shadow:0 0 8px rgba(100,180,255,0)}}
-.hotspot{position:absolute;border:1px solid rgba(160,200,255,.18);border-radius:6px;background:rgba(255,255,255,.02)}
-.pulse{animation:pulseBlue 4s ease-in-out infinite}
-.hotspot:hover{animation-play-state:paused;background:rgba(255,212,0,.08);outline:1px dashed rgba(255,212,0,.6);cursor:pointer}
-.hotspot.used{transition:box-shadow 1s ease;box-shadow:none!important;animation:none!important}
+.hotspot{position:absolute;border:2px solid rgba(127,209,255,.0);border-radius:10px;cursor:pointer;z-index:20}
+.hotspot.pulse{animation:pulse 1.2s infinite;border-color:rgba(127,209,255,.65);box-shadow:0 0 0 0 rgba(127,209,255,.35)}
+.hotspot.used{border-color:rgba(127,209,255,.0)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(127,209,255,.45)}70%{box-shadow:0 0 0 10px rgba(127,209,255,0)}100%{box-shadow:0 0 0 0 rgba(127,209,255,0)}}
 
-#hover-label{position:absolute;padding:2px 8px;background:#ffd400;color:#111;border-radius:4px;font-weight:700;pointer-events:none;display:none;z-index:50;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 #phone-btn{position:absolute;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;background:#1f1f24;color:#fff;border:1px solid #333;font-size:24px;cursor:pointer;z-index:40}
 #use-btn{position:absolute;right:92px;bottom:20px;background:#218838;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;z-index:40}
 .hidden{display:none!important}
 
 /* Keymap */
 #keymap{position:absolute;right:380px;bottom:84px;width:460px;background:#121219;border:1px solid #2a2a35;border-radius:10px;padding:10px 12px;z-index:61}
-#keymap h4{margin:0 0 6px;font-size:14px;color:#ffd400}
-.keymap-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.select-key select{background:#181824;border:1px solid #2a2a35;color:#eee;border-radius:6px;padding:4px 8px}
-.kb{display:grid;grid-template-columns:1fr} .row{display:flex;gap:6px;margin-bottom:6px} .spacer{height:4px}
-.kb .row div{flex:1;background:#171724;border:1px solid #2a2a35;border-radius:6px;text-transform:uppercase;font-weight:700;text-align:center;padding:6px 0 18px;position:relative;min-height:40px}
-.kb .row div .k{display:block;font-size:12px;opacity:.8}
-.kb .row div .lbl{position:absolute;left:4px;right:4px;bottom:2px;font-size:10px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kb .row div.hit{outline:2px solid #7fd1ff;box-shadow:0 0 10px rgba(127,209,255,.6) inset}
-.legend{display:flex;gap:14px;font-size:12px;opacity:.9} .legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
-.legend .note{background:#7fd1ff} .legend .chord{background:#ffd400}
+#keymap h4{margin:0 0 6px;font-size:14px}
+.keymap-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.select-key{font-size:12px;opacity:.9}
+.select-key select{background:#171722;border:1px solid #2a2a35;color:#fff;border-radius:8px;padding:4px 6px}
+.kb{margin-top:10px}
+.kb .row{display:flex;gap:6px;margin-bottom:6px}
+.kb .row > div{flex:1;background:#15151b;border:1px solid #2a2a35;border-radius:10px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.kb .k{font-size:11px;opacity:.85}
+.kb .lbl{font-size:12px;font-weight:700}
+.kb .hit{outline:2px solid rgba(255,212,0,.9);box-shadow:0 0 0 4px rgba(255,212,0,.18)}
+.hint{opacity:.8;font-size:12px;margin:10px 0 0}
 
 /* Phone */
 #phone{position:absolute;right:16px;bottom:84px;width:360px;height:580px;background:#0b0b0f;border:2px solid #333;border-radius:24px;overflow:hidden;z-index:60;box-shadow:0 12px 24px rgba(0,0,0,.6)}
 .phone-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:linear-gradient(180deg,#14141a,#0d0d12);border-bottom:1px solid #23232a}
 .phone-header .status{font-size:12px;opacity:.85} .phone-header button{background:#2a2a31;color:#eee;border:1px solid #3a3a45;border-radius:8px;padding:4px 8px;cursor:pointer}
 .phone-crack{position:absolute;inset:0;background-image:radial-gradient(transparent,transparent 60%,rgba(255,255,255,.06) 61%);pointer-events:none}
+
 .app-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px} .app{height:70px;border-radius:16px;border:1px solid #2a2a35;background:#15151b;color:#fff;cursor:pointer;font-size:18px}
-
-/* Make the phone content scroll reliably */
-.app-view{padding:12px;height:calc(580px - 70px - 40px);overflow:auto;-webkit-overflow-scrolling:touch}
-.scrollable{overflow:auto;-webkit-overflow-scrolling:touch}
-.app-pane{min-height:100%}
+.app-view{padding:12px;height:calc(580px - 70px - 40px);overflow:auto} .scrollable{overflow:auto}
 .app-pane h3{margin:6px 0 12px}
-
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;background:#121219;border:1px solid #272736;padding:10px;border-radius:10px}
-#buff-list{padding-left:16px;max-height:160px;overflow:auto;-webkit-overflow-scrolling:touch}
+#buff-list{padding-left:16px;max-height:160px;overflow:auto}
 
 /* Inventory */
 .inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px;background:#121219;border:1px solid #272736;border-radius:10px;min-height:120px}
 .slot{width:72px;height:72px;border:1px dashed #353545;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative}
-.slot img{width:60px;height:60px;object-fit:contain;pointer-events:none}
-.slot .qty{position:absolute;right:4px;bottom:4px;background:#000c;padding:1px 4px;border-radius:6px;font-size:10px}
-.slot.held{outline:2px solid #ffd400}
-.slot .name{position:absolute;bottom:-16px;left:0;right:0;text-align:center;font-size:10px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-/* Buttons / tabs */
-.hint{opacity:.75;font-size:12px;margin-top:8px}
-.tabs{display:flex;gap:8px;margin:10px 0}
-.tab{flex:1;background:#15151b;border:1px solid #2a2a35;color:#eee;border-radius:10px;padding:8px;cursor:pointer}
-.tab.active{outline:2px solid rgba(255,212,0,.6)}
-.row-btns{display:flex;gap:8px;margin:8px 0}
-.row-btns button, #open-bandmgr{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:8px 10px;cursor:pointer}
-.row-btns button:hover, #open-bandmgr:hover{filter:brightness(1.1)}
-
-/* Context menu */
-#context-menu{position:absolute;z-index:100;background:#15151b;border:1px solid #2a2a35;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;min-width:180px;box-shadow:0 10px 20px rgba(0,0,0,.55)}
-#context-menu button{background:#202028;color:#eee;border:1px solid #2f2f3a;border-radius:10px;padding:8px;cursor:pointer;text-align:left}
-#context-menu button:hover{filter:brightness(1.08)}
+.slot img{width:54px;height:54px;object-fit:contain}
+.qty{position:absolute;right:6px;bottom:4px;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:1px 6px;font-size:12px}
 
 /* Modal */
 #modal{position:absolute;inset:0;background:rgba(0,0,0,.65);display:grid;place-items:center;z-index:70}
-#modal-content{width:560px;max-width:90vw;background:#16161d;border:1px solid #2a2a35;border-radius:12px;padding:16px;max-height:85vh;overflow:hidden}
-#modal-close{float:right;background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-#modal-body{clear:both;padding-top:10px;max-height:70vh;overflow:auto;-webkit-overflow-scrolling:touch}
-.modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;position:sticky;bottom:0;background:rgba(22,22,29,.95);padding-top:10px}
-.modal-actions button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:8px 10px;cursor:pointer}
+#modal-content{width:560px;max-width:90vw;background:#16161d;border:1px solid #2a2a35;border-radius:12px;padding:16px}
 
 /* Piano roll & patterns */
 #piano-roll{margin-top:8px;height:220px;background:#0d0d14;border:1px solid #24243a;border-radius:8px;position:relative;overflow:hidden}
 .pr-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(32,1fr);grid-template-rows:repeat(7,1fr)}
 .pr-cell{border-right:1px solid #1a1a24;border-bottom:1px solid #1a1a24}
 .pr-note{background:rgba(255,212,0,.8);border:1px solid rgba(255,255,255,.3);border-radius:4px}
-#pattern-list .pattern{display:flex;align-items:center;justify-content:space-between;background:#121219;border:1px solid #272736;border-radius:8px;padding:8px 10px;margin-bottom:8px}
-#pattern-list button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-#pattern-list button:hover{filter:brightness(1.08)}
+#pattern-list .pattern{display:flex;align-items:center;justify-content:space-between;border:1px solid #25253a;background:#141420;padding:10px;border-radius:10px;margin-bottom:10px}
 
 /* DAW */
-#daw{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.65);z-index:80}
-#daw-card{width:900px;max-width:95vw;height:560px;background:#15151b;border:1px solid #2a2a35;border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
-.daw-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #2a2a35;background:linear-gradient(180deg,#14141a,#101014)}
-.daw-head button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-.daw-controls{display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid #2a2a35}
-.daw-controls button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-#daw-timeline-wrap{flex:1;overflow:auto;background:#0d0d14;-webkit-overflow-scrolling:touch}
-#daw-timeline{position:relative;height:260px;min-width:1200px;margin:16px;border:1px solid #24243a;border-radius:10px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0,rgba(255,255,255,.04) 1px,transparent 1px,transparent 16px)}
-#playhead{position:absolute;top:0;bottom:0;width:2px;background:#ffd400;left:0;pointer-events:none}
-.block{position:absolute;width:128px;height:36px;background:#1d1d26;border:1px solid #3a3a45;border-radius:10px;padding:8px 10px;cursor:grab;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.block.selected{outline:2px solid rgba(127,209,255,.8)}
-
-/* Death */
-#death{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.75);z-index:90}
-#death-card{width:520px;max-width:90vw;background:#16161d;border:1px solid #2a2a35;border-radius:14px;padding:18px}
-#death-card button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:10px 12px;cursor:pointer}
-
-/* Cheat */
-#cheat{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.65);z-index:90}
-#cheat-card{width:640px;max-width:92vw;background:#16161d;border:1px solid #2a2a35;border-radius:14px;padding:12px}
-.cheat-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-#cheat-input{width:100%;background:#0d0d14;border:1px solid #2a2a35;border-radius:10px;padding:10px;color:#eee}
-#cheat-log{margin-top:10px;max-height:240px;overflow:auto;font-size:12px;opacity:.9}
+#daw{position:absolute;inset:0;background:rgba(0,0,0,.75);z-index:80;display:grid;place-items:center}
+.daw-box{width:980px;max-width:96vw;max-height:88vh;background:#101018;border:1px solid #2a2a35;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.daw-header{display:flex;align-items:center;justify-content:space-between;background:#121222;border-bottom:1px solid #24243a;padding:10px 12px}
+.daw-controls{display:flex;gap:8px;flex-wrap:wrap}
+.daw-controls button{background:#1b1b26;border:1px solid #2a2a35;color:#fff;border-radius:10px;padding:8px 10px;cursor:pointer}
+.daw-timeline{position:relative;flex:1;background:linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:16px 100%;overflow:auto}
+#playhead{position:absolute;top:0;bottom:0;width:2px;background:rgba(127,209,255,.8);left:0}
 
 /* Band Manager */
-#bandmgr{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.65);z-index:85}
-#bm-card{width:900px;max-width:95vw;height:560px;background:#15151b;border:1px solid #2a2a35;border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
-.bm-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #2a2a35;background:linear-gradient(180deg,#14141a,#101014)}
-.bm-head button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-.bm-controls{display:flex;gap:8px;padding:10px 12px;border-bottom:1px solid #2a2a35}
-.bm-controls button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-#bm-bands{list-style:none;margin:0;padding:0;overflow:auto;-webkit-overflow-scrolling:touch}
-#bm-bands li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
-#bm-bands li.selected{outline:2px solid rgba(255,212,0,.35)}
-#bm-bands .meta{font-size:12px;opacity:.8}
-#bm-bands button{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
-#bm-detail{padding:12px;overflow:auto;-webkit-overflow-scrolling:touch}
-#bm-avatars{display:flex;gap:8px;margin:10px 0}
-.avatar{width:42px;height:42px;border-radius:14px;background:#1d1d26;border:1px solid #2a2a35;display:grid;place-items:center;font-weight:800}
+#bandmgr{position:absolute;inset:0;background:rgba(0,0,0,.75);z-index:85;display:grid;place-items:center}
+.bm-wrap{width:920px;max-width:96vw;max-height:88vh;background:#101018;border:1px solid #2a2a35;border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+.bm-header{display:flex;align-items:center;justify-content:space-between;background:#121222;border-bottom:1px solid #24243a;padding:10px 12px}
+.bm-body{display:grid;grid-template-columns:1fr 2fr;gap:0;height:100%}
+.bm-pane{padding:12px;overflow:auto}
+#bm-bands{list-style:none;padding:0;margin:10px 0}
+#bm-bands li{display:flex;align-items:center;justify-content:space-between;border:1px solid #26263a;background:#151524;padding:8px;border-radius:8px;margin-bottom:8px}
+#bm-bands li .meta{opacity:.8;font-size:12px}
+.bm-toolbar{display:flex;gap:8px}
+.bm-detail-head{display:flex;align-items:center;justify-content:space-between;background:#131321;border:1px solid #23233a;border-radius:8px;padding:10px;margin-bottom:10px}
+.bm-avatars{display:flex;gap:8px}
+.bm-avatars .avatar{width:42px;height:42px;border-radius:12px;background:#1b1b2a;border:1px solid #2a2a35;display:grid;place-items:center}
 .bm-tabs{display:flex;gap:8px;margin:10px 0}
-.bm-tabs button{flex:1;background:#15151b;border:1px solid #2a2a35;color:#eee;border-radius:10px;padding:8px;cursor:pointer}
-.bm-tabs button.active{outline:2px solid rgba(255,212,0,.6)}
-.bm-footer{margin-top:10px}
-#bm-back,#bm-rename{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:8px 10px;cursor:pointer}
+.bm-tabs button{background:#1b1b26;border:1px solid #2a2a35;color:#fff;border-radius:10px;padding:8px 10px;cursor:pointer}
+.bm-tabs button.active{outline:2px solid rgba(255,212,0,.7)}
+.bm-tab{min-height:120px;background:#121219;border:1px solid #272736;border-radius:10px;padding:10px}
+.bm-detail-actions{display:flex;gap:8px}
 
 /* Travel */
-#travel{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.65);z-index:82}
-#travel-card{width:560px;max-width:92vw;background:#16161d;border:1px solid #2a2a35;border-radius:14px;padding:12px}
-.travel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-#travel-close{background:#2a2a31;border:1px solid #3a3a45;color:#eee;border-radius:10px;padding:6px 10px;cursor:pointer}
+#travel{position:absolute;inset:0;background:rgba(0,0,0,.75);z-index:86;display:grid;place-items:center}
+.travel-wrap{width:520px;max-width:94vw;background:#101018;border:1px solid #2a2a35;border-radius:12px;padding:12px}
+.travel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.travel-opt{width:100%;padding:12px;border-radius:10px;background:#1b1b26;border:1px solid #2a2a35;color:#fff;cursor:pointer;margin-bottom:8px}
+
+/* === Scroll + layout fixes (v5.2.1) === */
+/* Phone: make inner panes scroll reliably */
+#phone{display:flex;flex-direction:column}
+.app-grid{flex:0 0 auto}
+.app-view{flex:1 1 auto;min-height:0;height:auto;overflow:auto;padding:12px}
+.app-pane{min-height:0}
+.buffs{min-height:0}
+
+/* Modal: keep buttons visible and body scrollable */
+#modal-content{display:flex;flex-direction:column;max-height:85vh;overflow:hidden}
+#modal-body{flex:1 1 auto;min-height:0;overflow:auto}
+#modal .modal-actions{flex:0 0 auto}
+
+/* Band Manager: ensure tab body can scroll and actions stay visible */
+.bm-wrap{height:88vh;max-height:88vh}
+.bm-body{flex:1 1 auto;min-height:0;height:auto}
+.bm-pane{display:flex;flex-direction:column;min-height:0}
+#bm-bands{flex:1 1 auto;min-height:0;overflow:auto}
+.bm-tabbody{flex:1 1 auto;min-height:0;overflow:auto}
+.bm-detail-actions{flex:0 0 auto;margin-top:10px}
+
+/* Pattern list inside phone: scroll within the pane */
+#pattern-list{max-height:none}

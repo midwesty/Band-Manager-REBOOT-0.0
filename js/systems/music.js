@@ -57,10 +57,10 @@ export class Music {
     };
 
     // --- State defaults ---
-    const s = this.state.state;
+    const s = this.state.state; // stateWrap.state (getter)
     s.patterns ||= [];
     s.music ||= { currentKey: "C" };
-    s.equipped ||= { instrument: null };
+    s.equipped ||= { instrumentId: null };
 
     // --- Recording / pattern state ---
     this.isPracticing = false;
@@ -223,7 +223,8 @@ export class Music {
 
   // ---------- Core ----------
   hasGuitarEquipped() {
-    return this.state.state.equipped?.instrument === "guitar";
+    const s = this.state?.state || this.state;
+    return s?.equipped?.instrumentId === "guitar";
   }
 
   blankPattern() {
@@ -247,34 +248,34 @@ export class Music {
     this.isRecording = true;
 
     const bpm = parseInt(this.dom.recBpm?.value || "120", 10) || 120;
-    this.currentPattern = {
-      name: "Untitled",
-      instrument: "guitar",
-      bpm,
-      length: this.maxSteps,
-      events: [],
-      createdAt: Date.now(),
-    };
+    this.currentPattern = this.blankPattern();
+    this.currentPattern.bpm = bpm;
 
     this.currentStep = 0;
-    const msPerStep = (60000 / bpm) / 4; // 16th notes
+
+    if (this.recordTimer) clearInterval(this.recordTimer);
+    const msPerStep = Math.max(30, Math.floor((60_000 / bpm) / 4)); // 16th notes
 
     this.recordTimer = setInterval(() => {
       this.currentStep = (this.currentStep + 1) % this.maxSteps;
+      this.drawPlayhead();
     }, msPerStep);
+
+    this.drawNotes();
+    this.drawPlayhead();
   }
 
   stopRecording() {
     if (!this.isRecording) return;
-
-    clearInterval(this.recordTimer);
-    this.recordTimer = null;
     this.isRecording = false;
 
-    const name = prompt("Save pattern as:", "Riff_" + Math.floor(Math.random() * 1000));
-    if (!name) return;
+    if (this.recordTimer) clearInterval(this.recordTimer);
+    this.recordTimer = null;
 
-    this.currentPattern.name = name.trim();
+    // Name + save
+    const name = prompt("Name this pattern:", this.currentPattern.name || "Untitled");
+    if (name) this.currentPattern.name = name.trim();
+
     this.state.state.patterns.push(this.currentPattern);
     this.state.save?.();
 
@@ -282,190 +283,173 @@ export class Music {
     this.setActiveTab("library");
   }
 
-  // ---------- Piano Roll ----------
-  initPianoRoll() {
-    if (!this.dom.pianoRoll) return;
-
-    this.dom.pianoRoll.innerHTML = "";
-    const grid = document.createElement("div");
-    grid.className = "pr-grid";
-    this.dom.pianoRoll.appendChild(grid);
-
-    for (let r = 0; r < 7; r++) {
-      for (let c = 0; c < this.maxSteps; c++) {
-        const cell = document.createElement("div");
-        cell.className = "pr-cell";
-        cell.style.gridRowStart = String(r + 1);
-        cell.style.gridColumnStart = String(c + 1);
-        grid.appendChild(cell);
-      }
-    }
-  }
-
-  drawNotes() {
-    if (!this.dom.pianoRoll) return;
-
-    this.dom.pianoRoll.querySelectorAll(".pr-note").forEach((n) => n.remove());
-    const grid = this.dom.pianoRoll.querySelector(".pr-grid");
-    if (!grid) return;
-
-    for (const ev of this.currentPattern.events) {
-      const rowIndex = Math.max(0, this.ROWS.indexOf(ev.row));
-      const note = document.createElement("div");
-      note.className = "pr-note";
-      note.style.gridRowStart = String(rowIndex + 1);
-      note.style.gridColumnStart = String(ev.step + 1);
-      grid.appendChild(note);
-    }
-  }
-
-  // ---------- Key labels + mapping ----------
+  // ---------- Key label generation ----------
   refreshKeyLabels() {
-    const root = this.state.state.music.currentKey || "C";
-    if (this.dom.keySelect) this.dom.keySelect.value = root;
+    const key = this.state.state.music.currentKey || "C";
+    const scale = majorScale(key); // 7 notes
 
-    // Make a major scale, then:
-    // Left-hand shows triads (7 repeating)
-    // Right-hand shows notes (7 repeating)
-    const scale = majorScale(root);
+    // Build chord labels (I, IV, V, vi etc… simplified)
+    // We’ll just map chords to scale degrees in a friendly way.
+    const chordRoots = [scale[0], scale[3], scale[4], scale[5], scale[1], scale[2], scale[6]];
+    const noteRoots = scale.concat(scale.map(n => n)); // enough to fill keys
 
-    const triads = [
-      { name: `${scale[0]}maj`, code: safeChordCode(scale[0]) },
-      { name: `${scale[1]}min`, code: safeChordCode(scale[1]) },
-      { name: `${scale[2]}min`, code: safeChordCode(scale[2]) },
-      { name: `${scale[3]}maj`, code: safeChordCode(scale[3]) },
-      { name: `${scale[4]}maj`, code: safeChordCode(scale[4]) },
-      { name: `${scale[5]}min`, code: safeChordCode(scale[5]) },
-      { name: `${scale[6]}dim`, code: safeChordCode(scale[6]) },
-    ];
+    this.__chords = chordRoots.map((n) => ({ label: n, code: safeChordCode(n) }));
+    this.__notes = noteRoots.map((n) => ({ label: n, code: safeNoteCode(n) }));
 
-    const notes = scale.map((n) => ({ name: n, code: safeNoteCode(n) }));
-
-    // 12 keys on each side
-    this.__chords = Array.from({ length: 12 }, (_, i) => triads[i % triads.length]);
-    this.__notes = Array.from({ length: 12 }, (_, i) => notes[i % notes.length]);
-
-    // Write labels into the visual keymap
+    // Update UI labels
     const leftHand = ["q","w","e","r","a","s","d","f","z","x","c","v"];
     const rightHand = ["u","i","o","p","j","k","l",";","m",",",".","/"];
 
     leftHand.forEach((k, i) => {
       const el = document.querySelector(`#keymap [data-key="${CSS.escape(k)}"] .lbl`);
-      if (el) el.textContent = this.__chords[i].name;
+      if (el) el.textContent = this.__chords[i % this.__chords.length]?.label || "";
     });
 
     rightHand.forEach((k, i) => {
       const el = document.querySelector(`#keymap [data-key="${CSS.escape(k)}"] .lbl`);
-      if (el) el.textContent = this.__notes[i].name;
+      if (el) el.textContent = this.__notes[i % this.__notes.length]?.label || "";
     });
+  }
+
+  // ---------- Audio ----------
+  playCode(instrumentId, code) {
+    // MVP hardcode (later: instrument json)
+    const base = "audio/shittyguitar/";
+    const src = base + code + ".mp3";
+
+    try {
+      const a = new Audio(src);
+      a.volume = 0.9;
+      a.play().catch(() => {});
+    } catch (e) {
+      // no crash if missing file
+    }
+  }
+
+  // ---------- Piano roll ----------
+  initPianoRoll() {
+    const root = this.dom.pianoRoll;
+    if (!root) return;
+
+    // Grid
+    root.innerHTML = `
+      <div class="pr-grid">
+        ${Array.from({ length: this.maxSteps * this.ROWS.length }).map(() => `<div class="pr-cell"></div>`).join("")}
+      </div>
+      <div class="pr-notes" style="position:absolute;inset:0;pointer-events:none"></div>
+      <div class="pr-playhead" style="position:absolute;top:0;bottom:0;width:2px;background:rgba(127,209,255,.8);left:0"></div>
+    `;
+
+    this.drawNotes();
+    this.drawPlayhead();
+  }
+
+  drawNotes() {
+    const root = this.dom.pianoRoll;
+    if (!root) return;
+    const notesLayer = root.querySelector(".pr-notes");
+    if (!notesLayer) return;
+
+    notesLayer.innerHTML = "";
+
+    const cellW = root.clientWidth / this.maxSteps;
+    const cellH = root.clientHeight / this.ROWS.length;
+
+    for (const ev of this.currentPattern.events) {
+      const x = Math.floor(ev.step) * cellW;
+      const y = Math.max(0, this.ROWS.indexOf(ev.row)) * cellH;
+
+      const d = document.createElement("div");
+      d.className = "pr-note";
+      d.style.position = "absolute";
+      d.style.left = `${x + 2}px`;
+      d.style.top = `${y + 2}px`;
+      d.style.width = `${Math.max(8, cellW - 4)}px`;
+      d.style.height = `${Math.max(8, cellH - 4)}px`;
+
+      notesLayer.appendChild(d);
+    }
+  }
+
+  drawPlayhead() {
+    const root = this.dom.pianoRoll;
+    if (!root) return;
+    const ph = root.querySelector(".pr-playhead");
+    if (!ph) return;
+
+    const x = (root.clientWidth / this.maxSteps) * this.currentStep;
+    ph.style.left = `${x}px`;
   }
 
   // ---------- Library ----------
   renderLibrary() {
-    if (!this.dom.patternList) return;
+    const list = this.dom.patternList;
+    if (!list) return;
 
     const patterns = this.state.state.patterns || [];
-    this.dom.patternList.innerHTML = "";
+    list.innerHTML = "";
 
-    patterns.forEach((p, idx) => {
-      const div = document.createElement("div");
-      div.className = "pattern";
+    patterns.forEach((p, i) => {
+      const row = document.createElement("div");
+      row.className = "pattern";
 
       const left = document.createElement("div");
-      left.textContent = `${p.name} • ${p.instrument} • ${p.bpm} BPM • ${new Date(p.createdAt).toLocaleString()}`;
+      left.innerHTML = `<strong>${escapeHTML(p.name || "Untitled")}</strong><div style="opacity:.8;font-size:12px">${p.instrument || "guitar"} • ${p.bpm || 120} bpm</div>`;
 
       const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.gap = "8px";
 
-      const bPlay = document.createElement("button");
-      bPlay.textContent = "Play";
-      bPlay.addEventListener("click", () => this.playPattern(p));
+      const play = document.createElement("button");
+      play.textContent = "Play";
+      play.addEventListener("click", () => this.previewPattern(p));
 
-      const bImport = document.createElement("button");
-      bImport.textContent = "Import to DAW";
-      bImport.addEventListener("click", () => {
-        window.dispatchEvent(new CustomEvent("bandscape:importPattern", { detail: { index: idx } }));
+      const imp = document.createElement("button");
+      imp.textContent = "Import to DAW";
+      imp.addEventListener("click", () => {
+        window.dispatchEvent(new CustomEvent("bandscape:importPattern", { detail: { index: i } }));
       });
 
-      const bDel = document.createElement("button");
-      bDel.textContent = "Delete";
-      bDel.addEventListener("click", () => {
-        patterns.splice(idx, 1);
+      const del = document.createElement("button");
+      del.textContent = "Delete";
+      del.addEventListener("click", () => {
+        if (!confirm(`Delete pattern "${p.name}"?`)) return;
+        patterns.splice(i, 1);
         this.state.save?.();
         this.renderLibrary();
       });
 
-      right.appendChild(bPlay);
-      right.appendChild(bImport);
-      right.appendChild(bDel);
+      right.appendChild(play);
+      right.appendChild(imp);
+      right.appendChild(del);
 
-      div.appendChild(left);
-      div.appendChild(right);
-
-      div.addEventListener("dblclick", () => {
-        window.dispatchEvent(new CustomEvent("bandscape:importPattern", { detail: { index: idx } }));
-      });
-
-      this.dom.patternList.appendChild(div);
+      row.appendChild(left);
+      row.appendChild(right);
+      list.appendChild(row);
     });
   }
 
-  // ---------- Playback ----------
-  playPattern(p) {
-    const eventsByStep = {};
-    for (const ev of p.events) (eventsByStep[ev.step] ||= []).push(ev);
+  previewPattern(p) {
+    if (!p?.events?.length) return;
+
+    // crude preview: step through events in time order
+    const bpm = p.bpm || 120;
+    const msPerStep = Math.max(30, Math.floor((60_000 / bpm) / 4));
+    const events = [...p.events].sort((a, b) => (a.step - b.step));
 
     let step = 0;
-    const msPerStep = (60000 / (p.bpm || 120)) / 4;
-    const timer = setInterval(() => {
-      for (const ev of (eventsByStep[step] || [])) {
-        this.playCode("guitar", ev.code || "note_C");
-      }
-      step = (step + 1) % (p.length || 32);
+    const t = setInterval(() => {
+      events.filter(ev => ev.step === step).forEach(ev => {
+        if (ev.code) this.playCode(p.instrument || "guitar", ev.code);
+      });
+      step++;
+      if (step >= (p.length || 32)) clearInterval(t);
     }, msPerStep);
-
-    setTimeout(() => clearInterval(timer), msPerStep * (p.length || 32));
   }
+}
 
-  // ---------- Audio resolution ----------
-  // This is intentionally robust NOW and becomes data-driven later.
-  playCode(instrumentId, code) {
-    // 1) If you have data.getInstrument(keymap) later, use it.
-    const inst = this.data?.getInstrument?.(instrumentId) || null;
-
-    // Preferred: inst.keymap[code] -> filename
-    let file = inst?.keymap?.[code] || inst?.keymap?.[String(code)] || null;
-    let folder = inst?.audioFolder || "audio/shittyguitar/";
-
-    // 2) Fallback mapping to your REAL files:
-    // chords: we only have A/D/E/G → approximate based on chord letter
-    if (!file && String(code).startsWith("chord_")) {
-      const letter = String(code).replace("chord_", "").toUpperCase();
-      if (letter.startsWith("A")) file = "chord_A.mp3";
-      else if (letter.startsWith("D")) file = "chord_D.mp3";
-      else if (letter.startsWith("E")) file = "chord_E.mp3";
-      else if (letter.startsWith("G")) file = "chord_G.mp3";
-      else file = "chord_G.mp3"; // safe default
-    }
-
-    // notes: we only have note_1/2/3 → cycle them
-    if (!file && String(code).startsWith("note_")) {
-      // deterministic-ish mapping using char codes
-      const n = String(code);
-      const sum = n.split("").reduce((a, ch) => a + ch.charCodeAt(0), 0);
-      const pick = (sum % 3) + 1;
-      file = `note_${pick}.mp3`;
-    }
-
-    if (!file) return;
-
-    const src = folder + file;
-
-    try {
-      const a = new Audio(src);
-      a.volume = 0.95;
-      a.play().catch(() => {});
-    } catch {
-      // no crash if audio fails
-    }
-  }
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+  })[c]);
 }
