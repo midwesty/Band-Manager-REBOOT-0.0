@@ -1,102 +1,81 @@
-import { clamp } from "./dom.js";
+import { loadAllData } from "./engine/data.js";
+import { $ } from "./engine/dom.js";
+import { createInitialState, setDataRegistry, getState } from "./engine/state.js";
+import { loadSaveIfAny, saveGame } from "./systems/save.js";
+import { startTimeLoop } from "./systems/time.js";
+import { initModalSystem } from "./systems/modal.js";
+import { initOverlaySystem } from "./systems/overlays.js";
+import { initInventorySystem } from "./systems/inventory.js";
+import { initHotspotSystem, buildHotspotsFromLocation } from "./systems/hotspots.js";
 
-let STATE = null;
-let REGISTRY = {
-  items: {},
-  buffs: {},
-  instruments: {},
-  location: null
-};
+import { Music } from "./systems/music.js";
+import { DAW } from "./systems/daw.js";
+import { BandMgr } from "./systems/bandmgr.js";
 
-export function setDataRegistry(reg) {
-  REGISTRY = reg;
-}
+export async function boot() {
+  // Load JSON registries
+  const data = await loadAllData();
+  setDataRegistry(data);
 
-export function getRegistry() {
-  return REGISTRY;
-}
+  // Base state
+  createInitialState();
 
-export function createInitialState() {
-  STATE = {
-    version: 2,
+  // Core systems
+  initModalSystem();
+  initOverlaySystem();
+  initInventorySystem();
+  initHotspotSystem();
 
-    time: { day: 1, hour: 9, minute: 0 },
-    stats: {
-      health: 100,
-      hunger: 80,
-      thirst: 80,
-      inebriation: 0,
-      fame: 0,
-      fans: 0,
-      money: 25
-    },
+  // Apply background from location JSON
+  const roomBg = $("#room-bg");
+  if (roomBg && data.location?.background) {
+    roomBg.src = data.location.background;
+  }
 
-    buffs: [], // { id, untilHourAbs }
+  // Build hotspots from JSON
+  buildHotspotsFromLocation(data.location);
 
-    equipped: {
-      instrumentId: null
-    },
+  // Load save (optional)
+  loadSaveIfAny();
 
-    holding: null, // { itemId, qty } optional future
+  // Seed starter items if empty
+  seedStarterItemsIfNeeded();
 
-    inventories: {
-      player: emptySlots(8),
-      fridge: emptySlots(8),
-      storage: emptySlots(8)
-    },
-
-    hotspotsUsed: {} // id -> true
+  // Instantiate feature systems (THIS WAS MISSING)
+  const stateWrap = {
+    get state() { return getState(); },
+    save: () => saveGame()
   };
 
-  // Broadcast render
-  document.addEventListener("bandscape:renderAll", () => {});
+  const music = new Music({ state: stateWrap, data });
+  const daw = new DAW({ state: stateWrap, data, music });
+  const bandMgr = new BandMgr({ state: stateWrap, data });
+
+  // Helpful debug handle
+  window.BANDSCAPE = { data, music, daw, bandMgr, state: stateWrap };
+
+  // Start time loop
+  startTimeLoop();
+
+  // Ensure keymap hidden on boot (Chrome cache weirdness insurance)
+  document.getElementById("keymap")?.classList.add("hidden");
+
+  // Render everything
+  document.dispatchEvent(new CustomEvent("bandscape:renderAll"));
 }
 
-export function getState() {
-  return STATE;
-}
+function seedStarterItemsIfNeeded() {
+  const state = getState();
+  const inv = state.inventories.player;
+  const any = inv.some(s => s && s.itemId);
+  if (any) return;
 
-export function ensureState() {
-  if (!STATE) createInitialState();
-  return STATE;
-}
+  inv[0] = { itemId: "water", qty: 2 };
+  inv[1] = { itemId: "pizza_slice", qty: 2 };
+  inv[2] = { itemId: "beer", qty: 1 };
+  inv[3] = { itemId: "guitar_basic", qty: 1 };
 
-export function markHotspotUsed(id) {
-  ensureState();
-  STATE.hotspotsUsed[id] = true;
-}
-
-export function isHotspotUsed(id) {
-  ensureState();
-  return !!STATE.hotspotsUsed[id];
-}
-
-export function statAdd(stat, delta) {
-  ensureState();
-  const s = STATE.stats;
-  if (!(stat in s)) return;
-  s[stat] = clamp(s[stat] + delta, 0, 999999);
-}
-
-export function addBuff(buffId, hours) {
-  ensureState();
-  const absHour = getAbsoluteHour(STATE.time) + Math.max(1, hours || 1);
-  // Replace if exists
-  const idx = STATE.buffs.findIndex(b => b.id === buffId);
-  if (idx >= 0) STATE.buffs[idx].untilHourAbs = absHour;
-  else STATE.buffs.push({ id: buffId, untilHourAbs: absHour });
-}
-
-export function pruneBuffs() {
-  ensureState();
-  const now = getAbsoluteHour(STATE.time);
-  STATE.buffs = STATE.buffs.filter(b => b.untilHourAbs > now);
-}
-
-export function getAbsoluteHour(time) {
-  return (time.day - 1) * 24 + time.hour;
-}
-
-function emptySlots(n) {
-  return Array.from({ length: n }, () => null);
+  state.inventories.fridge[0] = { itemId: "water", qty: 2 };
+  state.inventories.fridge[1] = { itemId: "juice", qty: 1 };
+  state.inventories.storage[0] = { itemId: "lyrics_notebook", qty: 1 };
 }

@@ -3,15 +3,28 @@ import { $, show, hide, on } from "../engine/dom.js";
 const overlayIds = ["phone", "daw", "bandmgr", "death", "cheat", "travel"];
 
 export function initOverlaySystem() {
-  // Phone toggle
   const phoneBtn = $("#phone-btn");
   const phone = $("#phone");
   const phoneClose = $("#phone-close");
 
-  on(phoneBtn, "click", () => toggleOverlay("phone"));
-  on(phoneClose, "click", () => closeOverlay("phone"));
+  on(phoneBtn, "click", () => {
+    toggleOverlay("phone");
+    // when opening phone, default to stats
+    if (phone && !phone.classList.contains("hidden")) {
+      showPhonePane("stats");
+    } else {
+      // closing phone: hide keymap
+      document.getElementById("keymap")?.classList.add("hidden");
+      document.dispatchEvent(new CustomEvent("bandscape:phoneAppChanged", { detail: { appId: null } }));
+    }
+  });
 
-  // Close buttons for other overlays already in HTML
+  on(phoneClose, "click", () => {
+    closeOverlay("phone");
+    document.getElementById("keymap")?.classList.add("hidden");
+    document.dispatchEvent(new CustomEvent("bandscape:phoneAppChanged", { detail: { appId: null } }));
+  });
+
   const map = {
     daw: "#daw-close",
     bandmgr: "#bm-close",
@@ -24,7 +37,6 @@ export function initOverlaySystem() {
     on(btn, "click", () => closeOverlay(id));
   }
 
-  // Esc closes topmost open overlay (simple priority order)
   on(document, "keydown", (e) => {
     if (e.key !== "Escape") return;
     for (let i = overlayIds.length - 1; i >= 0; i--) {
@@ -32,20 +44,19 @@ export function initOverlaySystem() {
       const el = $(`#${id}`);
       if (el && !el.classList.contains("hidden")) {
         closeOverlay(id);
+        if (id === "phone") document.getElementById("keymap")?.classList.add("hidden");
         break;
       }
     }
   });
 
-  // App buttons (in phone)
+  // Phone app buttons
   const appButtons = document.querySelectorAll(".app[data-app]");
   appButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      showPhonePane(btn.dataset.app);
-    });
+    btn.addEventListener("click", () => showPhonePane(btn.dataset.app));
   });
 
-  // Default stats pane
+  // Default
   showPhonePane("stats");
 }
 
@@ -53,29 +64,18 @@ export function openOverlay(id) {
   const el = $(`#${id}`);
   if (!el) return;
   show(el);
-
-  // Overlay lifecycle event (systems can hook into this)
-  window.dispatchEvent(new CustomEvent("bandscape:overlayOpened", { detail: { id } }));
 }
 
 export function closeOverlay(id) {
   const el = $(`#${id}`);
   if (!el) return;
   hide(el);
-
-  // If the phone closes, always hide the free-floating keymap
-  if (id === "phone") {
-    const km = $("#keymap");
-    km?.classList.add("hidden");
-  }
-
-  window.dispatchEvent(new CustomEvent("bandscape:overlayClosed", { detail: { id } }));
 }
 
 export function toggleOverlay(id) {
   const el = $(`#${id}`);
   if (!el) return;
-  el.classList.contains("hidden") ? openOverlay(id) : closeOverlay(id);
+  el.classList.contains("hidden") ? show(el) : hide(el);
 }
 
 function showPhonePane(appId) {
@@ -84,11 +84,8 @@ function showPhonePane(appId) {
   const target = document.querySelector(`#app-${appId}`);
   target?.classList.remove("hidden");
 
-  // Music keymap lives outside the phone; hide it unless we're on TrackLab.
-  if (appId !== "music") {
-    const km = $("#keymap");
-    km?.classList.add("hidden");
-  }
+  // Hide keymap unless we're in music app (music.js will show it if practice/record tab)
+  if (appId !== "music") document.getElementById("keymap")?.classList.add("hidden");
 
-  window.dispatchEvent(new CustomEvent("bandscape:phoneAppChanged", { detail: { appId } }));
+  document.dispatchEvent(new CustomEvent("bandscape:phoneAppChanged", { detail: { appId } }));
 }

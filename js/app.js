@@ -9,8 +9,8 @@ import { initInventorySystem } from "./systems/inventory.js";
 import { initHotspotSystem, buildHotspotsFromLocation } from "./systems/hotspots.js";
 
 import { Music } from "./systems/music.js";
-import { BandMgr } from "./systems/bandmgr.js";
 import { DAW } from "./systems/daw.js";
+import { BandMgr } from "./systems/bandmgr.js";
 
 export async function boot() {
   // Load JSON registries
@@ -26,39 +26,41 @@ export async function boot() {
   initInventorySystem();
   initHotspotSystem();
 
-  // Feature systems (DOM-wired)
-  // Wrap state so systems can call stateWrap.state + stateWrap.save()
-  const stateWrap = { 
-    get state() { return getState(); }, 
-    save: saveGame 
-  };
-
-  const music = new Music({ state: stateWrap, data });
-  const bandMgr = new BandMgr({ state: stateWrap });
-  const daw = new DAW({ state: stateWrap, data, music });
-
-  // Expose for debugging in console
-  window.BANDSCAPE = { state: stateWrap, music, bandMgr, daw, data };
-
-  // Apply location background and generate hotspots from JSON
+  // Apply background from location JSON
   const roomBg = $("#room-bg");
   if (roomBg && data.location?.background) {
     roomBg.src = data.location.background;
   }
 
-  // Replace any old hardcoded hotspots in HTML
+  // Build hotspots from JSON
   buildHotspotsFromLocation(data.location);
 
   // Load save (optional)
   loadSaveIfAny();
 
-  // Start time loop / stats UI update
-  startTimeLoop();
-
-  // Quick default inventory seed if empty (safe)
+  // Seed starter items if empty
   seedStarterItemsIfNeeded();
 
-  // Render initial inventory + stats
+  // Instantiate feature systems (THIS WAS MISSING)
+  const stateWrap = {
+    get state() { return getState(); },
+    save: () => saveGame()
+  };
+
+  const music = new Music({ state: stateWrap, data });
+  const daw = new DAW({ state: stateWrap, data, music });
+  const bandMgr = new BandMgr({ state: stateWrap, data });
+
+  // Helpful debug handle
+  window.BANDSCAPE = { data, music, daw, bandMgr, state: stateWrap };
+
+  // Start time loop
+  startTimeLoop();
+
+  // Ensure keymap hidden on boot (Chrome cache weirdness insurance)
+  document.getElementById("keymap")?.classList.add("hidden");
+
+  // Render everything
   document.dispatchEvent(new CustomEvent("bandscape:renderAll"));
 }
 
@@ -68,13 +70,11 @@ function seedStarterItemsIfNeeded() {
   const any = inv.some(s => s && s.itemId);
   if (any) return;
 
-  // Give player some basics
   inv[0] = { itemId: "water", qty: 2 };
   inv[1] = { itemId: "pizza_slice", qty: 2 };
   inv[2] = { itemId: "beer", qty: 1 };
   inv[3] = { itemId: "guitar_basic", qty: 1 };
 
-  // Seed fridge/storage a bit
   state.inventories.fridge[0] = { itemId: "water", qty: 2 };
   state.inventories.fridge[1] = { itemId: "juice", qty: 1 };
   state.inventories.storage[0] = { itemId: "lyrics_notebook", qty: 1 };
